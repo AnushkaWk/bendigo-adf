@@ -1,0 +1,31 @@
+{
+	"name": "DS_ASDB_STG",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_ASDB_KALON_DW",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"tableschema": {
+				"type": "string"
+			},
+			"tablename": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().tableschema",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().tablename",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

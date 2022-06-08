@@ -1,0 +1,9 @@
+{
+	"name": "adf-kalon-aw",
+	"location": "australiaeast",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "45a31c48-544a-410b-bad0-c2368f03753f",
+		"tenantId": "3845ca5e-bff8-4d95-a859-59bb83025c65"
+	}
+}

@@ -1,0 +1,12 @@
+{
+	"name": "LS_ASDB_KALON_DW",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"connectionString": "integrated security=False;encrypt=True;connection timeout=30;data source=sqlevorakalonpoc.database.windows.net;initial catalog=fn-app-poc;user id=sql-admin",
+			"encryptedCredential": "ew0KICAiVmVyc2lvbiI6ICIyMDE3LTExLTMwIiwNCiAgIlByb3RlY3Rpb25Nb2RlIjogIktleSIsDQogICJTZWNyZXRDb250ZW50VHlwZSI6ICJQbGFpbnRleHQiLA0KICAiQ3JlZGVudGlhbElkIjogIkRBVEFGQUNUT1JZQDkxQkFGNEY0LTJFN0YtNDJDMi1BRDA0LUY2RTEyQzY3NkIxNl9hZTU4Y2E1MS0xYTU5LTRjNTAtYjcyNS1iZGVjNGZlNzI2ZTMiDQp9"
+		}
+	}
+}

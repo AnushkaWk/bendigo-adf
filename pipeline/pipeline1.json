@@ -1,0 +1,164 @@
+{
+	"name": "pipeline1",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEach1",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.ItemCol",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Copy data1",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "RestSource",
+									"httpRequestTimeout": "00:01:40",
+									"requestInterval": "00.00:00:00.010",
+									"requestMethod": "GET"
+								},
+								"sink": {
+									"type": "JsonSink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings"
+									},
+									"formatSettings": {
+										"type": "JsonWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"path": "$['page']"
+											},
+											"sink": {
+												"path": "$['page']"
+											}
+										},
+										{
+											"source": {
+												"path": "$['per_page']"
+											},
+											"sink": {
+												"path": "$['per_page']"
+											}
+										},
+										{
+											"source": {
+												"path": "$['total']"
+											},
+											"sink": {
+												"path": "$['total']"
+											}
+										},
+										{
+											"source": {
+												"path": "$['total_pages']"
+											},
+											"sink": {
+												"path": "$['total_pages']"
+											}
+										},
+										{
+											"source": {
+												"path": "['id']"
+											},
+											"sink": {
+												"path": "$['data']['id']"
+											}
+										},
+										{
+											"source": {
+												"path": "['email']"
+											},
+											"sink": {
+												"path": "$['data']['email']"
+											}
+										},
+										{
+											"source": {
+												"path": "['first_name']"
+											},
+											"sink": {
+												"path": "$['data']['first_name']"
+											}
+										},
+										{
+											"source": {
+												"path": "['last_name']"
+											},
+											"sink": {
+												"path": "$['data']['last_name']"
+											}
+										},
+										{
+											"source": {
+												"path": "['avatar']"
+											},
+											"sink": {
+												"path": "$['data']['avatar']"
+											}
+										}
+									],
+									"collectionReference": "$['data']"
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "RestResource1",
+									"type": "DatasetReference",
+									"parameters": {
+										"PageNumber": {
+											"value": "@item()",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "Json1",
+									"type": "DatasetReference",
+									"parameters": {
+										"FileName": "@item()"
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"ItemCol": {
+				"type": "array",
+				"defaultValue": [
+					"1",
+					"2"
+				]
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-03-03T22:27:10Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

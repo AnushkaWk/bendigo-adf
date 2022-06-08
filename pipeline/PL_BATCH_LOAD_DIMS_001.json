@@ -1,0 +1,1083 @@
+{
+	"name": "PL_BATCH_LOAD_DIMS_001",
+	"properties": {
+		"activities": [
+			{
+				"name": "Load Dim_AccountClass",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimAccountClass]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_AdmissionType",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_AccountClass",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimAdmissionType]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_AppointmentOutcome",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_AdmissionType",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimAppointmentOutcome]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_AppointmentType",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_AppointmentOutcome",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimAppointmentType]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_CancellationReason",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_AppointmentType",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimCancellationReason]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_ClinicalCode",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_CancellationReason",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimClinicalCode]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_ClinicalUrgencyCategory",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_ClinicalCode",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimClinicalUrgencyCategory]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_DepartureStatus",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_ClinicalUrgencyCategory",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimDepartureStatus]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_EpisodeOutcome",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_DepartureStatus",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimEpisodeOutcome]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_KPIMeasure",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_EpisodeOutcome",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimKPIMeasure]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_LateStartReason",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_KPIMeasure",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimLateStartReason]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_Patient",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_LateStartReason",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimPatient]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_PatientGroup",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_Patient",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimPatientGroup]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_PresentStatus",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_PatientGroup",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimPresentStatus]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_ProfessionalGroup",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_PresentStatus",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimProfessionalGroup]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_ProgramStream",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_ProfessionalGroup",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimProgramStream]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_Provider",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_ProgramStream",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimProvider]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_ReferralDeliveryMode",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_Provider",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimReferralDeliveryMode]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_ReferralOutcome",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_ReferralDeliveryMode",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimReferralOutcome]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_ReferralServiceType",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_ReferralOutcome",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimReferralServiceType]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_SeparationDestination",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_ReferralServiceType",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimSeparationDestination]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_ServicePoint",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_SeparationDestination",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimServicePoint]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_ServicePointSession",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_ServicePoint",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimServicePointSession]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_ServicePointSessionStatus",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_ServicePointSession",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimServicePointSessionStatus]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_ServicePointSessionType",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_ServicePointSessionStatus",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimServicePointSessionType]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_TheatreOutcome",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_ServicePointSessionType",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimTheatreOutcome]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_TriageCategory",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_TheatreOutcome",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimTriageCategory]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_WaitingListEvent",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_TriageCategory",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimWaitingListEvent]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Dim_WaitingListModel",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_WaitingListEvent",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadDimWaitingListModel]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Ref_AccountClass",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Dim_WaitingListModel",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadRefAccountClass]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Ref_AdmissionType",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Ref_AccountClass",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadRefAdmissionType]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Ref_ClinicalUrgencyCategory",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Ref_AdmissionType",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadRefClinicalUrgencyCategory]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Ref_DepartureStatus",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Ref_ClinicalUrgencyCategory",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadRefDepartureStatus]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Ref_EpisodeOutcome",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Ref_DepartureStatus",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadRefEpisodeOutcome]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Ref_LocalGovernmentArea",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Ref_EpisodeOutcome",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadRefLocalGovernmentArea]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Ref_PostcodeLocation",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Ref_LocalGovernmentArea",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadRefPostcodeLocation]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Ref_PresentStatus",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Ref_PostcodeLocation",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadRefPresentStatus]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Ref_ReferralOutcome",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Ref_PresentStatus",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadRefReferralOutcome]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Ref_TriageCategory",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Ref_ReferralOutcome",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadRefTriageCategory]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Ref_WaitingListOfferConfirmationStatus",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Ref_TriageCategory",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadRefWaitingListOfferConfirmationStatus]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2021-02-04T05:36:33Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,219 @@
+{
+	"name": "PL_OVERALL_LOAD_FACTS",
+	"properties": {
+		"activities": [
+			{
+				"name": "Load Fact_EmergencyPresentation",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadFactEmergencyPresentation]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Fact_InpatientEpisode",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Fact_EmergencyPresentation",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadFactInpatientEpisode]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Fact_InpatientWaitingListEvent",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Fact_InpatientEpisode",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadFactInpatientWaitingListEvent]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Fact_Referral",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Fact_InpatientWaitingListEvent",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadFactReferrals]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Fact_Schedule",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Fact_Referral",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadFactSchedule]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Fact_TheatreCase",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Fact_Schedule",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadFactTheatreCase]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Fact_TheatreSession",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Fact_TheatreCase",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadFactTheatreSession]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Fact_WIESEstimate",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Fact_TheatreSession",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadFactWIESEstimate]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2021-02-04T05:36:36Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

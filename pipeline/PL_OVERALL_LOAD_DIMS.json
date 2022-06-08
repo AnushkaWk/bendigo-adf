@@ -1,0 +1,45 @@
+{
+	"name": "PL_OVERALL_LOAD_DIMS",
+	"properties": {
+		"activities": [
+			{
+				"name": "ExecuteFactDim_001",
+				"description": "",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_BATCH_LOAD_DIMS_001",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "ExecuteFactDim_002",
+				"description": "",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "ExecuteFactDim_001",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_BATCH_LOAD_DIMS_002",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2021-02-04T05:36:35Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

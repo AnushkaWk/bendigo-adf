@@ -1,0 +1,84 @@
+{
+	"name": "PL_BATCH_LOAD_DIMS_002",
+	"properties": {
+		"activities": [
+			{
+				"name": "Load Ref_WaitingListOfferOutcome",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadRefWaitingListOfferOutcome]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Ref_WaitingListRemovalReason",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Ref_WaitingListOfferOutcome",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadRefWaitingListRemovalReason]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Ref_WaitingListTheatreOutcome",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Ref_WaitingListRemovalReason",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Trfm].[uspLoadRefWaitingListTheatreOutcome]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ASDB_KALON_DW",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2021-02-04T05:36:34Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

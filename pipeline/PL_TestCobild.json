@@ -1,0 +1,121 @@
+{
+	"name": "PL_TestCobild",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy data1",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "ExcelSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						}
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "MeasureName",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "MeasureName",
+									"type": "String",
+									"physicalType": "varchar"
+								}
+							},
+							{
+								"source": {
+									"name": "Rating 1",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Rating1",
+									"type": "String",
+									"physicalType": "varchar"
+								}
+							},
+							{
+								"source": {
+									"name": "Rating 2",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Rating2",
+									"type": "String",
+									"physicalType": "varchar"
+								}
+							},
+							{
+								"source": {
+									"name": "Rating 3",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Rating3",
+									"type": "String",
+									"physicalType": "varchar"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "DS_Excel",
+						"type": "DatasetReference",
+						"parameters": {
+							"RangeStart": {
+								"value": "@pipeline().parameters.RangeStart",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DS_CobildSample",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"parameters": {
+			"RangeStart": {
+				"type": "string",
+				"defaultValue": "E9"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-05-03T04:16:23Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

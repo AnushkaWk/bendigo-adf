@@ -1,0 +1,34 @@
+{
+	"name": "DS_CobildSample",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_ASDB_KALON_DW",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "MeasureName",
+				"type": "varchar"
+			},
+			{
+				"name": "Rating1",
+				"type": "varchar"
+			},
+			{
+				"name": "Rating2",
+				"type": "varchar"
+			},
+			{
+				"name": "Rating3",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "CobildSample"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
