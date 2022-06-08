@@ -1,0 +1,16 @@
+{
+	"name": "DestinationDataset_lkh",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "KRONOS",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "AccrualExport",
+			"table": "File system file"
+		}
+	}
+}

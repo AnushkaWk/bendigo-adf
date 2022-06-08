@@ -1,0 +1,203 @@
+{
+	"name": "DW - PayGlobal - Create Table",
+	"properties": {
+		"activities": [
+			{
+				"name": "Full or Incremental",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "check-table-exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('check-table-exists').output.firstRow.result,1)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "get-ddl",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[config].[sp_getDdlPayGlobal]",
+									"storedProcedureParameters": {
+										"dest_schema": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.target_schema",
+												"type": "Expression"
+											}
+										},
+										"table_name": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.source_table",
+												"type": "Expression"
+											}
+										},
+										"table_owner": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.source_schema",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "SourceDataset_Dynamic_DB02",
+									"type": "DatasetReference",
+									"parameters": {
+										"SchemaName": "dummy",
+										"TableName": "dummy"
+									}
+								}
+							}
+						},
+						{
+							"name": "Create Table via SP",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "get-ddl",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "sp_executesql",
+								"storedProcedureParameters": {
+									"stmt": {
+										"value": {
+											"value": "@activity('get-ddl').output.firstRow.ddl",
+											"type": "Expression"
+										}
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSqlDB02",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "check-table-exists",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[config].[sp_tableExists]",
+						"storedProcedureParameters": {
+							"table_name": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.source_table",
+									"type": "Expression"
+								}
+							},
+							"table_owner": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.target_schema",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_Dynamic_DB02",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "dummy",
+							"TableName": "dummy"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"target_schema": {
+				"type": "string",
+				"defaultValue": "landing_payglobal_test"
+			},
+			"source_table": {
+				"type": "string",
+				"defaultValue": "Employee"
+			},
+			"source_schema": {
+				"type": "string",
+				"defaultValue": "dbo"
+			}
+		},
+		"variables": {
+			"raw_path": {
+				"type": "String"
+			},
+			"raw_file": {
+				"type": "String"
+			},
+			"table_full": {
+				"type": "String"
+			},
+			"file_timestamp": {
+				"type": "String"
+			},
+			"stage_path": {
+				"type": "String"
+			},
+			"ingestion_year": {
+				"type": "String",
+				"defaultValue": "2021"
+			},
+			"ingestion_month": {
+				"type": "String",
+				"defaultValue": "02"
+			},
+			"truncate_table": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	}
+}

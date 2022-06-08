@@ -1,0 +1,363 @@
+{
+	"name": "DW - Load Sql",
+	"properties": {
+		"activities": [
+			{
+				"name": "Drop and Create Full load External Tables",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "CMD External",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "sys.sp_executesql",
+					"storedProcedureParameters": {
+						"statement": {
+							"value": {
+								"value": "@activity('CMD External').output.firstRow.CMD_External",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "if first partition of incremental load",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Drop and Create Full load External Tables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(and(and(equals(activity('CMD External').output.firstRow.LoadType,'Incremental'),equals(activity('CMD External').output.firstRow.HasWatermarkColumn,bool(1))),equals(activity('CMD External').output.firstRow.ID,1)),equals(activity('CMD External').output.firstRow.InitialLoadCompleted,bool(1)))",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Update WatermarkColumn_InitialLoadValue",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 3,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "sys.sp_executesql",
+								"storedProcedureParameters": {
+									"statement": {
+										"value": {
+											"value": "@concat(' Update  ct  SET ct.[WatermarkColumn_InitialLoadValue] =''',\nactivity('CMD External').output.firstRow.From,\n''' From [cfg].[ConfigTable] ct Where ct.[Stage_TableName]=''' ,\nactivity('CMD External').output.firstRow.Stage_TableName,\n''' and ct.[SourceSystemName]=''',\nactivity('CMD External').output.firstRow.SourceSystemName,\n''' and ct.[SourceSystemType]=''',\nactivity('CMD External').output.firstRow.SourceSystemType,\n''''\n)",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSqlDWDatabase",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "if last partition of incremental load",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Copy - stg to int Schema",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(equals(activity('CMD External').output.firstRow.LoadType,'Incremental'),equals(activity('CMD External').output.firstRow.LastPart,1))",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Update InitialLoadCompleted",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 3,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "sys.sp_executesql",
+								"storedProcedureParameters": {
+									"statement": {
+										"value": {
+											"value": "@concat(' Update  ct  SET ct.[InitialLoadCompleted] =1',\n\n' From [cfg].[ConfigTable] ct Where ct.[Stage_TableName]=''' ,\nactivity('CMD External').output.firstRow.Stage_TableName,\n''' and ct.[SourceSystemName]=''',\nactivity('CMD External').output.firstRow.SourceSystemName,\n''' and ct.[SourceSystemType]=''',\nactivity('CMD External').output.firstRow.SourceSystemType,\n''''\n)",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSqlDWDatabase",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Copy - ext to stg",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "if first partition of incremental load",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[util].[spGenericDataIngestion]",
+					"storedProcedureParameters": {
+						"BatchId": {
+							"value": {
+								"value": "@pipeline().parameters.batchId",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"FromTo": {
+							"value": "1",
+							"type": "Int32"
+						},
+						"SourceSystemName": {
+							"value": {
+								"value": "@activity('CMD External').output.firstRow.SourceSystemName",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"SourceTableName": {
+							"value": {
+								"value": "@activity('CMD External').output.firstRow.tableName",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"SourceTableSchema": {
+							"value": {
+								"value": "@activity('CMD External').output.firstRow.schemaName",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Copy - stg to int Schema",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Wait 2 sec between steps",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[util].[spGenericDataIngestion]",
+					"storedProcedureParameters": {
+						"BatchId": {
+							"value": {
+								"value": "@pipeline().parameters.batchId",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"FromTo": {
+							"value": "2",
+							"type": "Int32"
+						},
+						"SourceSystemName": {
+							"value": {
+								"value": "@activity('CMD External').output.firstRow.SourceSystemName",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"SourceTableName": {
+							"value": {
+								"value": "@activity('CMD External').output.firstRow.tableName",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"SourceTableSchema": {
+							"value": {
+								"value": "@activity('CMD External').output.firstRow.schemaName",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Truncate Stage Table",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "sys.sp_executesql",
+					"storedProcedureParameters": {
+						"statement": {
+							"value": {
+								"value": "@concat ('Truncate Table ',\n\n'[stg].[',\npipeline().parameters.StageTableName,\n'];'\n)",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "CMD External",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Truncate Stage Table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 5,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@concat(' Select\n\n [CMD_External] \n,[schemaName]\n,[tableName]\n,[SourceSystemName]\n,[Stage_SourceName]\n,[FolderPath]\n,[StageLocation] \n,[SourceFileNamePrefix]\n,[Destination_TableName]\n,[External_TableName]\n,[Stage_TableName]\n,[LoadType]\n,[HasWatermarkColumn]\n,[InitialLoadCompleted]\n,[ID]\n,[BatchID]\n,[LastPart]\n,[SourceSystemType]\n,[From]\n,[To]\n\n from [dbo].[GetSourceNamesToCopy] where [BatchID]= ',\nstring(pipeline().parameters.batchId),\n' and  [Status]=',\n'''Succeeded''',\n' and  [StageCopyStatus]=',\n'''Succeeded''',\n' and [SourceSystemName]=''' ,\npipeline().parameters.SourceSystemName,\n''' and [Stage_SourceName]=''',\npipeline().parameters.StageSourceName,\n''''\n\n)",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00"
+					},
+					"dataset": {
+						"referenceName": "FileNamesDataSet_DW",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Wait 2 sec between steps",
+				"type": "Wait",
+				"dependsOn": [
+					{
+						"activity": "Copy - ext to stg",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"waitTimeInSeconds": 2
+				}
+			}
+		],
+		"parameters": {
+			"batchId": {
+				"type": "string"
+			},
+			"SourceSystemName": {
+				"type": "string"
+			},
+			"ID": {
+				"type": "int"
+			},
+			"StageSourceName": {
+				"type": "string"
+			},
+			"StageTableName": {
+				"type": "string"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,301 @@
+{
+	"name": "pl_pbi_dataset_refresh",
+	"properties": {
+		"description": "Generates AAD Token and calls the dataset refresh. The status of the refresh is checked every 2 min until completed.",
+		"activities": [
+			{
+				"name": "Get TenantId from AKV",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(pipeline().globalParameters.KeyVaultDNSName,'secrets/',pipeline().globalParameters.SecretName_TenantId,'/?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Get ClientId from AKV",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(pipeline().globalParameters.KeyVaultDNSName,'secrets/',pipeline().globalParameters.SecretName_SPClientId,'/?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Get Secret from AKV",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(pipeline().globalParameters.KeyVaultDNSName,'secrets/',pipeline().globalParameters.SecretName_SPSecret,'/?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Get AAD Token",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Get TenantId from AKV",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Get ClientId from AKV",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Get Secret from AKV",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://login.microsoftonline.com/',activity('Get TenantId from AKV').output.value,'/oauth2/token')",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('grant_type=client_credentials&resource=https://analysis.windows.net/powerbi/api&client_id=',activity('Get ClientId from AKV').output.value,'&client_secret=',encodeUriComponent(activity('Get Secret from AKV').output.value))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Call dataset refresh",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Get AAD Token",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://api.powerbi.com/v1.0/myorg/groups/',pipeline().parameters.workspaceGuid,'/datasets/',pipeline().parameters.datasetGuid,'/refreshes')",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"headers": {
+						"Authorization": {
+							"value": "@concat(string(activity('Get AAD Token').output.token_type),' ',string(activity('Get AAD Token').output.access_token))",
+							"type": "Expression"
+						}
+					},
+					"body": {
+						"notifyOption": "NoNotification"
+					}
+				}
+			},
+			{
+				"name": "Until dataset refresh completion",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "Call dataset refresh",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@not(equals(first(json(string(activity('Get dataset refresh status').output)).value).status,'Unknown'))",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Wait 2 minutes",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 120
+							}
+						},
+						{
+							"name": "Get dataset refresh status",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Wait 2 minutes",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://api.powerbi.com/v1.0/myorg/groups/',pipeline().parameters.workspaceGuid,'/datasets/',pipeline().parameters.datasetGuid,'/refreshes?$top=1')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"Authorization": {
+										"value": "@concat(string(activity('Get AAD Token').output.token_type),' ',string(activity('Get AAD Token').output.access_token))",
+										"type": "Expression"
+									},
+									"Content-Type": "application/json"
+								}
+							}
+						}
+					],
+					"timeout": "7.00:00:00"
+				}
+			},
+			{
+				"name": "If dataset refresh failed",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Until dataset refresh completion",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(first(json(string(activity('Get dataset refresh status').output)).value).status,'Failed')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "SaveErrorMessages",
+							"description": "In case of an error in processing of the dataset, the actual messages are saved in the pipeline variable \"ProcessingErrors\".",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ProcessingErrors",
+								"value": {
+									"value": "@string(json(first(json(string(activity('Get dataset refresh status').output)).value).serviceExceptionJson))",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set variable1",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "SaveErrorMessages",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "devops-error",
+								"value": {
+									"value": "@string(div(1,0))",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"workspaceGuid": {
+				"type": "string",
+				"defaultValue": "ee656594-54c0-4817-a1b5-242426a7c19e"
+			},
+			"datasetGuid": {
+				"type": "string",
+				"defaultValue": "ec170156-ed26-4287-b9d9-516764893f6c"
+			}
+		},
+		"variables": {
+			"ProcessingErrors": {
+				"type": "Boolean"
+			},
+			"devops-error": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	}
+}

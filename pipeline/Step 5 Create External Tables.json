@@ -1,0 +1,47 @@
+{
+	"name": "Step 5 Create External Tables",
+	"properties": {
+		"activities": [
+			{
+				"name": "Create External Tables",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[PolyBase].[CreateExternalTables]",
+					"storedProcedureParameters": {
+						"sourceSystemName": {
+							"value": {
+								"value": "@pipeline().parameters.sourceSystemName",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"sourceSystemName": {
+				"type": "string",
+				"defaultValue": "SAP"
+			}
+		},
+		"folder": {
+			"name": "PolyBase"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

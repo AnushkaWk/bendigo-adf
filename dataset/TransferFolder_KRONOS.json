@@ -1,0 +1,23 @@
+{
+	"name": "TransferFolder_KRONOS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "FS_KRONOS",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "FileServerLocation",
+				"folderPath": "KronosTest"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\"",
+			"firstRowAsHeader": false,
+			"quoteChar": ""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

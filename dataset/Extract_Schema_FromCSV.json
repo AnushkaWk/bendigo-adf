@@ -1,0 +1,206 @@
+{
+	"name": "Extract_Schema_FromCSV",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorage",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"cw_fileName": {
+				"type": "String",
+				"defaultValue": "d02_hier_20191106.csv"
+			},
+			"cw_folderPath": {
+				"type": "String",
+				"defaultValue": "raw/d02_hier/2019/11/"
+			},
+			"sourceSystemName": {
+				"type": "string",
+				"defaultValue": "sap"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().cw_fileName",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@dataset().cw_folderPath",
+					"type": "Expression"
+				},
+				"fileSystem": "sap"
+			},
+			"columnDelimiter": "^",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": ""
+		},
+		"schema": [
+			{
+				"name": "Employee",
+				"type": "String"
+			},
+			{
+				"name": "Last Name",
+				"type": "String"
+			},
+			{
+				"name": "First Name",
+				"type": "String"
+			},
+			{
+				"name": "FOA",
+				"type": "String"
+			},
+			{
+				"name": "Nickname",
+				"type": "String"
+			},
+			{
+				"name": "From",
+				"type": "String"
+			},
+			{
+				"name": "To",
+				"type": "String"
+			},
+			{
+				"name": "Position",
+				"type": "String"
+			},
+			{
+				"name": "Percent",
+				"type": "String"
+			},
+			{
+				"name": "Cost Cntr",
+				"type": "String"
+			},
+			{
+				"name": "Position Description",
+				"type": "String"
+			},
+			{
+				"name": "Position Working Title",
+				"type": "String"
+			},
+			{
+				"name": "Position Access Title",
+				"type": "String"
+			},
+			{
+				"name": "Org Unit",
+				"type": "String"
+			},
+			{
+				"name": "Org Unit Description",
+				"type": "String"
+			},
+			{
+				"name": "Employee Status",
+				"type": "String"
+			},
+			{
+				"name": "SubDept ID",
+				"type": "String"
+			},
+			{
+				"name": "SubDept Chief Pos",
+				"type": "String"
+			},
+			{
+				"name": "SubDept Chief Emp",
+				"type": "String"
+			},
+			{
+				"name": "SubDept Chief Emp Name",
+				"type": "String"
+			},
+			{
+				"name": "Dept ID",
+				"type": "String"
+			},
+			{
+				"name": "Dept Chief Pos",
+				"type": "String"
+			},
+			{
+				"name": "Dept Chief Emp",
+				"type": "String"
+			},
+			{
+				"name": "Dept Chief Emp Name",
+				"type": "String"
+			},
+			{
+				"name": "Dir ID",
+				"type": "String"
+			},
+			{
+				"name": "Dir Chief Pos",
+				"type": "String"
+			},
+			{
+				"name": "Dir Chief Emp",
+				"type": "String"
+			},
+			{
+				"name": "Dir Chief Emp Name",
+				"type": "String"
+			},
+			{
+				"name": "Div ID",
+				"type": "String"
+			},
+			{
+				"name": "Div Chief Pos",
+				"type": "String"
+			},
+			{
+				"name": "Div Chief Emp",
+				"type": "String"
+			},
+			{
+				"name": "Div Chief Emp Name",
+				"type": "String"
+			},
+			{
+				"name": "CEO ID",
+				"type": "String"
+			},
+			{
+				"name": "CEO Chief Pos",
+				"type": "String"
+			},
+			{
+				"name": "CEO Chief Emp",
+				"type": "String"
+			},
+			{
+				"name": "CEO Chief Emp Name",
+				"type": "String"
+			},
+			{
+				"name": "Position Tier",
+				"type": "String"
+			},
+			{
+				"name": "P&C Advisor",
+				"type": "String"
+			},
+			{
+				"name": "Recruitment Coordinator",
+				"type": "String"
+			},
+			{
+				"name": "Payroll Team",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

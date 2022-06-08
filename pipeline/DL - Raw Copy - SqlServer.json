@@ -1,0 +1,274 @@
+{
+	"name": "DL - Raw Copy - SqlServer",
+	"properties": {
+		"activities": [
+			{
+				"name": "Raw Copy From SQL",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "ExtractQuery",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@activity('ExtractQuery').output.firstRow.QueryExtract",
+							"type": "Expression"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"maxConcurrentConnections": 1
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".csv"
+						}
+					},
+					"enableStaging": false,
+					"parallelCopies": 1,
+					"enableSkipIncompatibleRow": true,
+					"redirectIncompatibleRowSettings": {
+						"linkedServiceName": {
+							"referenceName": "ErrorOutput",
+							"type": "LinkedServiceReference"
+						},
+						"path": {
+							"value": "@concat(pipeline().parameters.sourceSystemName,'/','erroroutput')",
+							"type": "Expression"
+						}
+					},
+					"dataIntegrationUnits": 2
+				},
+				"inputs": [
+					{
+						"referenceName": "SourceDataset_SQL",
+						"type": "DatasetReference",
+						"parameters": {
+							"schemaName": {
+								"value": "@pipeline().parameters.schemaName",
+								"type": "Expression"
+							},
+							"tableName": {
+								"value": "@pipeline().parameters.tableName",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DestinationDataset_CSV_DL",
+						"type": "DatasetReference",
+						"parameters": {
+							"fileName": {
+								"value": "@pipeline().parameters.sourceName",
+								"type": "Expression"
+							},
+							"folderPath": {
+								"value": "@concat('raw/',\npipeline().parameters.schemaName,\n'_',\npipeline().parameters.tableName,\n'/',\npipeline().parameters.yearId,\n'/',\npipeline().parameters.monthId\n)",
+								"type": "Expression"
+							},
+							"containerName": {
+								"value": "@toLower(pipeline().parameters.sourceSystemName)",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Update Load Summary",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Wait 2 sec",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Logging].[UpdateLoadSummary]",
+					"storedProcedureParameters": {
+						"batchId": {
+							"value": {
+								"value": "@pipeline().parameters.batchId",
+								"type": "Expression"
+							},
+							"type": "Int64"
+						},
+						"sourceSystemName": {
+							"value": {
+								"value": "@pipeline().parameters.sourceSystemName",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"sourceName": {
+							"value": {
+								"value": "@pipeline().parameters.sourceName",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"pipelineRunID ": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ingestionStart": {
+							"value": {
+								"value": "@activity('Raw Copy From SQL').output.executionDetails[0].start",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"rowCountSource": {
+							"value": {
+								"value": "@activity('Raw Copy From SQL').output.rowsRead",
+								"type": "Expression"
+							},
+							"type": "Int64"
+						},
+						"rowCountDestination": {
+							"value": {
+								"value": "@activity('Raw Copy From SQL').output.rowsCopied",
+								"type": "Expression"
+							},
+							"type": "Int64"
+						},
+						"ingestionEnd": {
+							"value": {
+								"value": "@addseconds(activity('Raw Copy From SQL').output.executionDetails[0].start,activity('Raw Copy From SQL').output.executionDetails[0].duration)",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"Status": {
+							"value": {
+								"value": "@activity('Raw Copy From SQL').output.executionDetails[0].status",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Wait 2 sec",
+				"type": "Wait",
+				"dependsOn": [
+					{
+						"activity": "Raw Copy From SQL",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed",
+							"Skipped"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"waitTimeInSeconds": 2
+				}
+			},
+			{
+				"name": "ExtractQuery",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@concat(' Select case when [LoadType]=',\n'''Full''',\n' then QueryExtract ',\n' when [LoadType]=',\n'''Incremental''',\n' then Query_Extract  end as QueryExtract ',\n' from [dbo].[GetSourceNamesToCopy]\n\nwhere [BatchID]= ',\nstring(pipeline().parameters.batchId),\n' and  [Status]=',\n'''In Progress''',\n\n' and [SourceSystemType]=''' ,\npipeline().parameters.sourceSystemType,\n\n''' and [LoadType]=''' ,\npipeline().parameters.loadType,\n\n''' and [schemaName]=''',\npipeline().parameters.schemaName,\n\n''' and [tableName]=''',\npipeline().parameters.tableName,\n\n''' and [SourceSystemName]=''',\npipeline().parameters.sourceSystemName,\n\n''' and [Stage_TableName]=''',\npipeline().parameters.stageTableName,\n\n''' and [SourceName]=''',\npipeline().parameters.sourceName,\n''''\n)",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00"
+					},
+					"dataset": {
+						"referenceName": "FileNamesDataSet_DW",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"schemaName": {
+				"type": "string"
+			},
+			"tableName": {
+				"type": "string"
+			},
+			"sourceSystemName": {
+				"type": "string"
+			},
+			"batchId": {
+				"type": "int"
+			},
+			"sourceName": {
+				"type": "string"
+			},
+			"yearId": {
+				"type": "string"
+			},
+			"monthId": {
+				"type": "string"
+			},
+			"sourceSystemType": {
+				"type": "string"
+			},
+			"loadType": {
+				"type": "string"
+			},
+			"stageTableName": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"queryExtract": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

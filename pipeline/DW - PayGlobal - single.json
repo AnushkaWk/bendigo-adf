@@ -1,0 +1,701 @@
+{
+	"name": "DW - PayGlobal - single",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy Source to Raw Blob",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set Stage Path",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Gen Truncate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Gen Incremental",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@concat('select *, CURRENT_TIMESTAMP as ingestion_timestamp, ''',\npipeline().RunId, ''' as ingestion_runid ', \n' from ', \npipeline().parameters.source_schema, '.', pipeline().parameters.source_table, ' ', variables('incremental_clause'))",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "SourceDataset_PayGlobal",
+						"type": "DatasetReference",
+						"parameters": {
+							"schemaName": "dbo",
+							"tableName": "org"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DestinationDataset_CSVQ_DL",
+						"type": "DatasetReference",
+						"parameters": {
+							"fileName": {
+								"value": "@variables('raw_file')",
+								"type": "Expression"
+							},
+							"folderPath": {
+								"value": "@variables('raw_path')",
+								"type": "Expression"
+							},
+							"containerName": {
+								"value": "@pipeline().parameters.system_name",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Set Filename",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set file timestamp",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "raw_file",
+					"value": {
+						"value": "@concat(toUpper(pipeline().parameters.system_name),'_',variables('table_full'),'-',variables('file_timestamp'),'.csv')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set TableFull",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "table_full",
+					"value": {
+						"value": "@concat(pipeline().parameters.source_schema,'_',pipeline().parameters.source_table)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set RawPath",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set TableFull",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set Ingestion Year",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set Ingestion Month",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set Ingestion Timestamp",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set Filename",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "raw_path",
+					"value": {
+						"value": "@concat('raw/',variables('table_full'),'/',variables('ingestion_year') , '/',variables('ingestion_month'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set file timestamp",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "file_timestamp",
+					"value": {
+						"value": "@utcnow('yyyyMMdd-HHmmss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set Ingestion Year",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "ingestion_year",
+					"value": {
+						"value": "@utcnow('yyyy')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set Ingestion Month",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "ingestion_month",
+					"value": {
+						"value": "@utcnow('MM')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set Stage Path",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set RawPath",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "stage_path",
+					"value": {
+						"value": "@variables('table_full')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Copy Raw Blob to Staging Blob",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Copy Source to Raw Blob",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "DestinationDataset_CSVQ_DL",
+						"type": "DatasetReference",
+						"parameters": {
+							"fileName": {
+								"value": "@variables('raw_file')",
+								"type": "Expression"
+							},
+							"folderPath": {
+								"value": "@variables('raw_path')",
+								"type": "Expression"
+							},
+							"containerName": {
+								"value": "@pipeline().parameters.system_name",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DestinationDataset_Parquet_Stage_DL",
+						"type": "DatasetReference",
+						"parameters": {
+							"sourceName": {
+								"value": "@variables('raw_file')",
+								"type": "Expression"
+							},
+							"folderPath": {
+								"value": "@variables('stage_path')",
+								"type": "Expression"
+							},
+							"yearId": {
+								"value": "@variables('ingestion_year')",
+								"type": "Expression"
+							},
+							"monthId": {
+								"value": "@variables('ingestion_month')",
+								"type": "Expression"
+							},
+							"sourceSystemName": {
+								"value": "@pipeline().parameters.system_name",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Gen Truncate",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.load_type,'F')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Truncate Table",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "truncate_table",
+								"value": {
+									"value": "IF OBJECT_ID('@{pipeline().parameters.target_schema}.@{pipeline().parameters.source_table}') IS NOT NULL  truncate table @{pipeline().parameters.target_schema}.@{pipeline().parameters.source_table}\n",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Copy Staging Blob to DW",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Copy Raw Blob to Staging Blob",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Create Table if required",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "ParquetSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						}
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": {
+							"value": "@{variables('truncate_table')}",
+							"type": "Expression"
+						},
+						"tableOption": "autoCreate",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": false,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "DestinationDataset_Parquet_Stage_DL",
+						"type": "DatasetReference",
+						"parameters": {
+							"sourceName": {
+								"value": "@variables('raw_file')",
+								"type": "Expression"
+							},
+							"folderPath": {
+								"value": "@variables('stage_path')",
+								"type": "Expression"
+							},
+							"yearId": {
+								"value": "@variables('ingestion_year')",
+								"type": "Expression"
+							},
+							"monthId": {
+								"value": "@variables('ingestion_month')",
+								"type": "Expression"
+							},
+							"sourceSystemName": {
+								"value": "@pipeline().parameters.system_name",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "SourceDataset_Dynamic_DB02",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": {
+								"value": "@pipeline().parameters.target_schema",
+								"type": "Expression"
+							},
+							"TableName": {
+								"value": "@pipeline().parameters.source_table",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Update watermark if Incremental",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Copy Staging Blob to DW",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.load_type,'I')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "lookup-new-watermark",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "@concat('select max(', pipeline().parameters.watermark_expr_max, ') as watermark_ts_new from ', pipeline().parameters.target_schema, '.', pipeline().parameters.source_table)",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "SourceDataset_Dynamic_DB02",
+									"type": "DatasetReference",
+									"parameters": {
+										"SchemaName": "dummyschema",
+										"TableName": "dummytable"
+									}
+								}
+							}
+						},
+						{
+							"name": "update watermark",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "lookup-new-watermark",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[config].[sp_updateWatermark]",
+								"storedProcedureParameters": {
+									"pipeline": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"system_id": {
+										"value": {
+											"value": "@pipeline().parameters.system_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"table_name": {
+										"value": {
+											"value": "@pipeline().parameters.source_table",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"table_owner": {
+										"value": {
+											"value": "@pipeline().parameters.source_schema",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"watermark": {
+										"value": {
+											"value": "@activity('lookup-new-watermark').output.firstRow.watermark_ts_new",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSqlDB02",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set Ingestion Timestamp",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "ingestion_timestamp",
+					"value": {
+						"value": "@utcnow()",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Create Table if required",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Copy Source to Raw Blob",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "DW - PayGlobal - Create Table",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"target_schema": {
+							"value": "@pipeline().parameters.target_schema",
+							"type": "Expression"
+						},
+						"source_table": {
+							"value": "@pipeline().parameters.source_table",
+							"type": "Expression"
+						},
+						"source_schema": {
+							"value": "@pipeline().parameters.source_schema",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Gen Incremental",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.load_type,'I')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Set Incremental Clause",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "incremental_clause",
+								"value": {
+									"value": "@concat('where ', \npipeline().parameters.watermark_expr_compare, \n' >= to_timestamp(''', \npipeline().parameters.watermark_value, \n''',''YYYY-MM-DD HH24:MI:SS'') ')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"target_schema": {
+				"type": "string",
+				"defaultValue": "landing_payglobal_test"
+			},
+			"system_name": {
+				"type": "string",
+				"defaultValue": "payglobal"
+			},
+			"source_table": {
+				"type": "string",
+				"defaultValue": "Employee"
+			},
+			"source_schema": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"load_type": {
+				"type": "string",
+				"defaultValue": "F"
+			},
+			"watermark_expr_compare": {
+				"type": "string"
+			},
+			"watermark_value": {
+				"type": "string"
+			},
+			"watermark_expr_max": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"raw_path": {
+				"type": "String"
+			},
+			"raw_file": {
+				"type": "String"
+			},
+			"table_full": {
+				"type": "String"
+			},
+			"file_timestamp": {
+				"type": "String"
+			},
+			"stage_path": {
+				"type": "String"
+			},
+			"ingestion_year": {
+				"type": "String",
+				"defaultValue": "2021"
+			},
+			"ingestion_month": {
+				"type": "String",
+				"defaultValue": "02"
+			},
+			"truncate_table": {
+				"type": "String"
+			},
+			"incremental_clause": {
+				"type": "String"
+			},
+			"ingestion_timestamp": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	}
+}

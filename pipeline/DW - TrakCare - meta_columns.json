@@ -1,0 +1,56 @@
+{
+	"name": "DW - TrakCare - meta_columns",
+	"properties": {
+		"description": "ingest metacolumn informatiom from the information schema",
+		"activities": [
+			{
+				"name": "Copy metacolumns",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OdbcSource",
+						"query": "select table_schema, table_name, column_name, ordinal_position\n , is_nullable, data_type, character_maximum_length\n , numeric_precision, numeric_scale\nfrom information_schema.columns\nwhere table_schema = 'sqluser'\n  order by 1, 2, 4",
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "IF OBJECT_ID('config.meta_columns') IS NOT NULL truncate table config.meta_columns",
+						"tableOption": "autoCreate",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "SourceDataset_Trakcare",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "dummy_schema",
+							"TableName": "dummy_table"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "SourceDataset_Dynamic_DB02",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "config",
+							"TableName": "meta_columns"
+						}
+					}
+				]
+			}
+		],
+		"annotations": []
+	}
+}

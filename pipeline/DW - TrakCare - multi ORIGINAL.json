@@ -1,0 +1,131 @@
+{
+	"name": "DW - TrakCare - multi ORIGINAL",
+	"properties": {
+		"activities": [
+			{
+				"name": "lookup-tables",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "select system_id, table_owner, table_name\nfrom config.meta_tables\nwhere table_name = 'PA_Person'",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_Dynamic_DB02",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "dummy_schema",
+							"TableName": "dummy_table"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "copy-each-table",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "lookup-tables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('lookup-tables').output.value",
+						"type": "Expression"
+					},
+					"batchCount": 4,
+					"activities": [
+						{
+							"name": "Copy data1",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "OdbcSource",
+									"query": {
+										"value": "@concat('select %NOLOCK * from ', item().table_owner, '.', item().table_name)",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00"
+								},
+								"sink": {
+									"type": "AzureSqlSink",
+									"preCopyScript": {
+										"value": "IF OBJECT_ID('@{pipeline().parameters.target_schema_name}.@{item().table_name}') IS NOT NULL  truncate table @{pipeline().parameters.target_schema_name}.@{item().table_name}",
+										"type": "Expression"
+									},
+									"tableOption": "autoCreate",
+									"disableMetricsCollection": false
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "SourceDataset_Trakcare",
+									"type": "DatasetReference",
+									"parameters": {
+										"SchemaName": {
+											"value": "@item().table_owner",
+											"type": "Expression"
+										},
+										"TableName": {
+											"value": "@item().table_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "SourceDataset_Dynamic_DB02",
+									"type": "DatasetReference",
+									"parameters": {
+										"SchemaName": {
+											"value": "@pipeline().parameters.target_schema_name",
+											"type": "Expression"
+										},
+										"TableName": {
+											"value": "@item().table_name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"target_schema_name": {
+				"type": "string",
+				"defaultValue": "landing"
+			}
+		},
+		"annotations": []
+	}
+}

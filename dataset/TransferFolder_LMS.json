@@ -1,0 +1,23 @@
+{
+	"name": "TransferFolder_LMS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LMS",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "FileServerLocation",
+				"folderPath": "Transfers/LMS/Test"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": false,
+			"quoteChar": ""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

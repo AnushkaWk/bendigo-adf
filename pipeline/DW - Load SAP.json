@@ -1,0 +1,257 @@
+{
+	"name": "DW - Load SAP",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy - ext to stg",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Drop and Create SAP External Tables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[util].[spCopyExternaltoStaging]",
+					"storedProcedureParameters": {
+						"BatchId": {
+							"value": {
+								"value": "@pipeline().parameters.batchId",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"DestinationSchemaname": {
+							"value": "stg",
+							"type": "String"
+						},
+						"DestinationTblname": {
+							"value": {
+								"value": "@pipeline().parameters.DestinationTableName",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"SourceSchemaname": {
+							"value": "ext",
+							"type": "String"
+						},
+						"SourceSystemName": {
+							"value": {
+								"value": "@pipeline().parameters.SourceSystemName",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"SourceTblname": {
+							"value": {
+								"value": "@pipeline().parameters.SourceTableName",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Truncate Stage Table",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "sys.sp_executesql",
+					"storedProcedureParameters": {
+						"statement": {
+							"value": {
+								"value": "@concat ('Truncate Table ',\n\n'[stg].[',\npipeline().parameters.StageTableName,\n'];'\n)",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Copy - stg to int Schema",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Wait 2 secs in between",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": {
+						"value": "@concat('[int].[spLoad',\npipeline().parameters.StageTableName,\n']')",
+						"type": "Expression"
+					},
+					"storedProcedureParameters": {
+						"BatchId": {
+							"value": {
+								"value": "@pipeline().parameters.batchId",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Drop and Create SAP External Tables",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "CMD External",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "sys.sp_executesql",
+					"storedProcedureParameters": {
+						"statement": {
+							"value": {
+								"value": "@activity('CMD External').output.firstRow.CMD_External",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "CMD External",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Truncate Stage Table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 5,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@concat(' Select [CMD_External]  from [dbo].[GetSourceNamesToCopy] where [BatchID]= ',\nstring(pipeline().parameters.batchId),\n' and  [Status]=',\n'''Succeeded''',\n' and  [StageCopyStatus]=',\n'''Succeeded''',\n' and [SourceSystemName]=''' ,\npipeline().parameters.SourceSystemName,\n\n''' and [FolderPath]=''' ,\npipeline().parameters.FolderPath,\n\n''' and [StageLocation]=''',\npipeline().parameters.StageLocation,\n\n''' and [SourceFileNamePrefix]=''',\npipeline().parameters.SourceFileNamePrefix,\n\n''' and [Destination_TableName]=''',\npipeline().parameters.DestinationTableName,\n\n''' and [External_TableName]=''',\npipeline().parameters.ExternalTableName,\n\n''' and [Stage_TableName]=''',\npipeline().parameters.StageTableName,\n''''\n)",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00"
+					},
+					"dataset": {
+						"referenceName": "FileNamesDataSet_DW",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Wait 2 secs in between",
+				"type": "Wait",
+				"dependsOn": [
+					{
+						"activity": "Copy - ext to stg",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"waitTimeInSeconds": 2
+				}
+			}
+		],
+		"parameters": {
+			"SourceSystemName": {
+				"type": "string"
+			},
+			"FolderPath": {
+				"type": "string"
+			},
+			"StageLocation": {
+				"type": "string"
+			},
+			"SourceFileNamePrefix": {
+				"type": "string"
+			},
+			"DestinationTableName": {
+				"type": "string"
+			},
+			"SourceTableName": {
+				"type": "string"
+			},
+			"StageTableName": {
+				"type": "string"
+			},
+			"batchId": {
+				"type": "string"
+			},
+			"ExternalTableName": {
+				"type": "string"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

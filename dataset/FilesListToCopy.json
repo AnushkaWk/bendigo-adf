@@ -1,0 +1,17 @@
+{
+	"name": "FilesListToCopy",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDWDatabase",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "GetSourceNamesToCopy"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

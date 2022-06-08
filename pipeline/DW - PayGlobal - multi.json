@@ -1,0 +1,202 @@
+{
+	"name": "DW - PayGlobal - multi",
+	"properties": {
+		"activities": [
+			{
+				"name": "lookup-tables",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 4,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@concat(\n'with wm as(\n  select ROW_NUMBER() OVER(PARTITION BY system_id, table_owner, table_name ORDER BY update_ts DESC)\n        AS \"rn\"\n      , system_id\n      , table_owner\n      , table_name\n      , watermark_ts\n      , update_ts\n  from config.watermark\n)\nselect mt.system_id\n  , mt.table_owner\n  , mt.table_name\n  , mt.dest_schema\n  , mt.load_type\n  , convert(varchar, coalesce(wm.watermark_ts,cast(''2001-01-01 00:00:00.000'' as datetime)),120) as watermark_ts\n  , watermark_expr_compare\n  , watermark_expr_max\nfrom config.meta_tables mt\nleft join wm\n  on mt.system_id = wm.system_id\n     and mt.table_owner = wm.table_owner\n     and mt.table_name  = wm.table_name\nwhere mt.system_id = ''',pipeline().parameters.system_id, ''' \nand coalesce(rn,1) = 1 ')",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_Dynamic_DB02",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "dummySchema",
+							"TableName": "dummyTable"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "copy-each-table",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "lookup-tables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('lookup-tables').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 8,
+					"activities": [
+						{
+							"name": "Invoke for Single Table",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [
+								{
+									"name": "item",
+									"value": "@concat(item().dest_schema,'.',item().table_name)"
+								}
+							],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DW - PayGlobal - single",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"target_schema": {
+										"value": "@item().dest_schema",
+										"type": "Expression"
+									},
+									"system_name": {
+										"value": "@item().system_id",
+										"type": "Expression"
+									},
+									"source_table": {
+										"value": "@item().table_name",
+										"type": "Expression"
+									},
+									"source_schema": {
+										"value": "@item().table_owner",
+										"type": "Expression"
+									},
+									"load_type": {
+										"value": "@item().load_type",
+										"type": "Expression"
+									},
+									"watermark_expr_compare": {
+										"value": "@item().watermark_expr_compare",
+										"type": "Expression"
+									},
+									"watermark_value": {
+										"value": "@item().watermark_ts",
+										"type": "Expression"
+									},
+									"watermark_expr_max": {
+										"value": "@item().watermark_expr_max",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "trigger dbt if required",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "copy-each-table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.trigger_dbt,true)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Trigger-DevOps-Pipeline",
+							"description": "Trigger the dbt DevOps pipeline to build the dbt model in the warehouse",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_trigger_devops",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"PipelineId": {
+										"value": "@pipeline().globalParameters.DevOpsBuildPipelineIdPayGlobal",
+										"type": "Expression"
+									},
+									"PipelineSleepSeconds": "60"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Refresh PBI",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "trigger dbt if required",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_pbi_refresh",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"system_id": {
+							"value": "@pipeline().parameters.system_id",
+							"type": "Expression"
+						},
+						"refresh_group": {
+							"value": "@pipeline().parameters.refresh_group",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"system_id": {
+				"type": "string",
+				"defaultValue": "payglobal"
+			},
+			"trigger_dbt": {
+				"type": "bool",
+				"defaultValue": true
+			},
+			"refresh_group": {
+				"type": "string",
+				"defaultValue": "hr_daily"
+			}
+		},
+		"annotations": []
+	}
+}

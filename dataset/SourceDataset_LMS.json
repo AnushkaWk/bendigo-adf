@@ -1,0 +1,81 @@
+{
+	"name": "SourceDataset_LMS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LMS",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"fileName": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "FileServerLocation",
+				"fileName": {
+					"value": "@dataset().fileName",
+					"type": "Expression"
+				},
+				"folderPath": "Transfers/KronosTest"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "Pers ID",
+				"type": "String"
+			},
+			{
+				"name": "First Name",
+				"type": "String"
+			},
+			{
+				"name": "Last Name",
+				"type": "String"
+			},
+			{
+				"name": "Module ID",
+				"type": "String"
+			},
+			{
+				"name": "Module Name",
+				"type": "String"
+			},
+			{
+				"name": "Module Short Name",
+				"type": "String"
+			},
+			{
+				"name": "Completed Date",
+				"type": "String"
+			},
+			{
+				"name": "Completion Status",
+				"type": "String"
+			},
+			{
+				"name": "Position Name",
+				"type": "String"
+			},
+			{
+				"name": "Organisation Name",
+				"type": "String"
+			},
+			{
+				"name": "Health Service",
+				"type": "String"
+			},
+			{
+				"name": "Job Family Description",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

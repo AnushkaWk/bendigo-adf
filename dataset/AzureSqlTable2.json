@@ -1,0 +1,16 @@
+{
+	"name": "AzureSqlTable2",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDB02",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "landing",
+			"table": "LMS_milduraprogramstatus"
+		}
+	}
+}

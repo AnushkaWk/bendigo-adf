@@ -1,0 +1,668 @@
+{
+	"name": "Master - Prep works Part 1",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get Source System Lists",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Clean Log Table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "Select * from dbo.SourceSystemsDetails \nwhere \n\t[IsEnabled]=1 \n\n",
+							"type": "Expression"
+						},
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_Dynamic_DW",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "cfg",
+							"TableName": "ConfigTable"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Logging - Load summary CSV Files",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Set CSV List",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('CSVList')",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 10,
+					"activities": [
+						{
+							"name": "Switch Source System",
+							"type": "Switch",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"on": {
+									"value": "@item().SourceSystemName",
+									"type": "Expression"
+								},
+								"cases": [
+									{
+										"value": "SAP",
+										"activities": [
+											{
+												"name": "FileSystems Info",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "Prep works Part 1 - Log CSV Files ModifiedDate",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"batchId": {
+															"value": "@pipeline().parameters.batchId",
+															"type": "Expression"
+														},
+														"fileNamePrefix": {
+															"value": "@item().SourceFileNamePrefix",
+															"type": "Expression"
+														},
+														"sourceSystemName": {
+															"value": "@item().SourceSystemName",
+															"type": "Expression"
+														},
+														"sourceNamePrefix": {
+															"value": "@item().SourceNamePrefix",
+															"type": "Expression"
+														},
+														"folderPath": {
+															"value": "@item().FolderPath",
+															"type": "Expression"
+														},
+														"sourceSystemType": {
+															"value": "@item().SourceSystemType",
+															"type": "Expression"
+														},
+														"loadType": {
+															"value": "@item().LoadType",
+															"type": "Expression"
+														},
+														"fileSystemExtension": {
+															"value": "@item().FileSystemExtension",
+															"type": "Expression"
+														},
+														"status": "In Progress"
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "KRONOS",
+										"activities": [
+											{
+												"name": "FileSystems Info KRONOS",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "Prep works Part 1 - Log CSV Files ModifiedDate KRONOS",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"batchId": {
+															"value": "@pipeline().parameters.batchId",
+															"type": "Expression"
+														},
+														"fileNamePrefix": {
+															"value": "@item().SourceFileNamePrefix",
+															"type": "Expression"
+														},
+														"sourceSystemName": {
+															"value": "@item().SourceSystemName",
+															"type": "Expression"
+														},
+														"sourceNamePrefix": {
+															"value": "@item().SourceNamePrefix",
+															"type": "Expression"
+														},
+														"folderPath": {
+															"value": "@item().FolderPath",
+															"type": "Expression"
+														},
+														"sourceSystemType": {
+															"value": "@item().SourceSystemType",
+															"type": "Expression"
+														},
+														"loadType": {
+															"value": "@item().LoadType",
+															"type": "Expression"
+														},
+														"fileSystemExtension": {
+															"value": "@item().FileSystemExtension",
+															"type": "Expression"
+														},
+														"status": "In Progress"
+													}
+												}
+											}
+										]
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "CSV",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Get Source System Lists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Source System Lists').output.value",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@and(equals(item().SourceSystemType,'FileSystem'),equals(item().SourceFileNameExtension,'.csv'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SqlServer",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Get Source System Lists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Source System Lists').output.value",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceSystemType,'SqlServer')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set CSV List",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "CSV",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "CSVList",
+					"value": {
+						"value": "@activity('CSV').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set SqlServer List",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "SqlServer",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "SqlServerList",
+					"value": {
+						"value": "@activity('SqlServer').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Get Source Tables Structure",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Set SqlServer List",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('SqlServerList')",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Get Source Tables Structure and update config table",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "FullLoad",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "Prep works Part 1 - Get the Table Structure",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"schemaName": {
+										"value": "@item().schemaName",
+										"type": "Expression"
+									},
+									"tableName": {
+										"value": "@item().tableName",
+										"type": "Expression"
+									},
+									"loadType": {
+										"value": "@item().LoadType",
+										"type": "Expression"
+									},
+									"fromDate": {
+										"value": "@item().WatermarkColumn_InitialLoadValue",
+										"type": "Expression"
+									},
+									"ingestionQuery": {
+										"value": "@item().QueryExtract",
+										"type": "Expression"
+									},
+									"sourceSystemName": {
+										"value": "@item().SourceSystemName",
+										"type": "Expression"
+									},
+									"batchId": {
+										"value": "@pipeline().parameters.batchId",
+										"type": "Expression"
+									},
+									"sourceName": {
+										"value": "@concat(item().SourceNamePrefix,item().FullLoadExtension)",
+										"type": "Expression"
+									},
+									"YearId": {
+										"value": "@item().YearId",
+										"type": "Expression"
+									},
+									"MonthId": {
+										"value": "@item().MonthId",
+										"type": "Expression"
+									},
+									"DayId": {
+										"value": "@item().DayId",
+										"type": "Expression"
+									},
+									"sourceNamePrefix": {
+										"value": "@item().SourceNamePrefix",
+										"type": "Expression"
+									},
+									"folderPath": {
+										"value": "@item().FolderPath",
+										"type": "Expression"
+									},
+									"sourceSystemType": {
+										"value": "@item().SourceSystemType",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "FullLoad",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(item().LoadType,'Full')",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Log Table Info",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 3,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[Logging].[GenerateLoadSummary]",
+											"storedProcedureParameters": {
+												"batchId": {
+													"value": {
+														"value": "@pipeline().parameters.batchId",
+														"type": "Expression"
+													},
+													"type": "Int32"
+												},
+												"sourceName": {
+													"value": {
+														"value": "@concat(item().SourceNamePrefix,item().FullLoadExtension)",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"modifiedDateUTC": {
+													"value": {
+														"value": "@utcnow()",
+														"type": "Expression"
+													},
+													"type": "DateTime"
+												},
+												"pipelineRunID": {
+													"value": {
+														"value": "@pipeline().RunId",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"sourceSystemName": {
+													"value": {
+														"value": "@item().SourceSystemName",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"sourceNamePrefix": {
+													"value": {
+														"value": "@item().SourceNamePrefix",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"folderPath": {
+													"value": {
+														"value": "@item().FolderPath",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"sourceSystemType": {
+													"value": {
+														"value": "@item().SourceSystemType",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"loadType": {
+													"value": {
+														"value": "@item().LoadType",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"Status": {
+													"value": "In Progress",
+													"type": "String"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "AzureSqlDWDatabase",
+											"type": "LinkedServiceReference"
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Clean Log Table",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Logging].[CleanLoadSummary]"
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "incremental load tables with initial load",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Clean Log Table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "Select * from \n\n[dbo].[IncrementalLoadsList]\n\nwhere [InitialLoad]=1 and [InitialLoadCompleted]=0",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_Dynamic_DW",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "dbo",
+							"TableName": "IncrementalLoadsList"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "partitioning loads info",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "incremental load tables with initial load",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('incremental load tables with initial load').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "clean InitialLoadsInfo table",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "sys.sp_executesql",
+								"storedProcedureParameters": {
+									"statement": {
+										"value": {
+											"value": "@concat(' Delete from [cfg].[InitialLoadsInfo] where [SourceSystemName]=''',\nitem().SourceSystemName,\n''' and [SchemaName]=''',\nitem().SchemaName,\n''' and [TableName]= ''',\nitem().TableName,\n''''\n)",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSqlDWDatabase",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Stage info - Initial load Parts",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "clean InitialLoadsInfo table",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderQuery": {
+										"value": "@concat(' select ''',\nitem().SourceSystemName,\n''' as [SourceSystemName], ''',\nitem().SchemaName,\n''' as [SchemaName], ''',\nitem().TableName,\n'''' ,\n' as [TableName]\n , cast(left(convert(varchar(50),cast(',\nitem().WatermarkColumn_Name,\n' as datetime2),112),6) as int) as [Group], ''',\nitem().GroupType,\n''' as [GroupType] ',\n', Convert(varchar(50),cast( Min(',\nitem().WatermarkColumn_Name,\n') as datetime2),120)',\n' as [From] ',\n', Convert(varchar(50),cast( Max(',\nitem().WatermarkColumn_Name,\n') as datetime2),120)',\n' as [To] ',\n', Count(1) as [NumberOfRows] \nFrom [',\nitem().SchemaName,\n'].[',\nitem().TableName,\n']',\n' group by cast(left (convert(varchar(50),cast(',\n\nitem().WatermarkColumn_Name,\n\n' as datetime2),112),6) as int) '\n)",
+										"type": "Expression"
+									},
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "AzureSqlSink",
+									"disableMetricsCollection": false
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "SourceDataset_SQL",
+									"type": "DatasetReference",
+									"parameters": {
+										"schemaName": {
+											"value": "@item().SchemaName",
+											"type": "Expression"
+										},
+										"tableName": {
+											"value": "@item().TableName",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "SourceDataset_Dynamic_DW",
+									"type": "DatasetReference",
+									"parameters": {
+										"SchemaName": "cfg",
+										"TableName": "InitialLoadsInfo"
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"batchId": {
+				"type": "string",
+				"defaultValue": "77"
+			}
+		},
+		"variables": {
+			"SqlServerList": {
+				"type": "Array"
+			},
+			"CSVList": {
+				"type": "Array"
+			},
+			"DateWatermarks": {
+				"type": "Array"
+			},
+			"IntWatermarks": {
+				"type": "Array"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

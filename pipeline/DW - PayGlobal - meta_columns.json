@@ -1,0 +1,74 @@
+{
+	"name": "DW - PayGlobal - meta_columns",
+	"properties": {
+		"description": "ingest metacolumn informatiom from the information schema",
+		"activities": [
+			{
+				"name": "Copy metacolumns",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"additionalColumns": [
+							{
+								"name": "ingestion_timestamp",
+								"value": {
+									"value": "@utcnow()",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "ingestion_runid",
+								"value": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						],
+						"sqlReaderQuery": "select *\nfrom information_schema.columns\nwhere table_schema = 'dbo'\norder by table_name, column_name",
+						"queryTimeout": "02:00:00",
+						"isolationLevel": "ReadUncommitted",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "IF OBJECT_ID('config.meta_columns_payglobal') IS NOT NULL truncate table config.meta_columns_payglobal",
+						"tableOption": "autoCreate",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "SourceDataset_PayGlobal",
+						"type": "DatasetReference",
+						"parameters": {
+							"schemaName": "dummy_schema",
+							"tableName": "dummy_table"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "SourceDataset_Dynamic_DB02",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "config",
+							"TableName": "meta_columns_payglobal"
+						}
+					}
+				]
+			}
+		],
+		"annotations": []
+	}
+}

@@ -1,0 +1,32 @@
+{
+	"name": "SourceDataset_KRONOS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "FS_KRONOS",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"fileName": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "FileServerLocation",
+				"fileName": {
+					"value": "@dataset().fileName",
+					"type": "Expression"
+				},
+				"folderPath": "KronosTest"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\"",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

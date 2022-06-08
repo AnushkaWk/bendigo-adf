@@ -1,0 +1,24 @@
+{
+	"name": "SqlServerLMS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Des_LMS",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"TableName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "int",
+			"table": {
+				"value": "@dataset().TableName",
+				"type": "Expression"
+			}
+		}
+	}
+}

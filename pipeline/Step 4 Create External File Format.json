@@ -1,0 +1,58 @@
+{
+	"name": "Step 4 Create External File Format",
+	"properties": {
+		"activities": [
+			{
+				"name": "Create External File Format - Parquet",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[PolyBase].[CreateExternalFileFormat_Parquet]",
+					"storedProcedureParameters": {
+						"EFF_Name": {
+							"value": {
+								"value": "@pipeline().parameters.EFF_Name",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"EFF_Type": {
+							"value": {
+								"value": "@pipeline().parameters.EFF_Type",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"EFF_Name": {
+				"type": "string",
+				"defaultValue": "KRONOS_EFF_Parquet"
+			},
+			"EFF_Type": {
+				"type": "string",
+				"defaultValue": "PARQUET"
+			}
+		},
+		"folder": {
+			"name": "PolyBase"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

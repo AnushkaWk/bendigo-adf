@@ -1,0 +1,415 @@
+{
+	"name": "Master Pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Set BatchId",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Get Batch ID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "batchId",
+					"value": {
+						"value": "@{activity('Get Batch ID').output.firstRow.BatchId}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Start Log BatchInfo",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Logging].[GenerateBatchInfo]",
+					"storedProcedureParameters": {
+						"BatchStart": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"BatchStatus": {
+							"value": "In Progress",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Get Batch ID",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Wait 5 sec",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@concat(\n'SELECT top 1 [BatchId]      \n  FROM [Logging].[BatchInfo]\nwhere [BatchEnd] is null and convert(varchar(10),[BatchStart],120)= convert(varchar(10),''' ,\nutcnow(),\n''',120) ORDER BY [BatchStart] desc '\n)",
+							"type": "Expression"
+						}
+					},
+					"dataset": {
+						"referenceName": "FileNamesDataSet_DW",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Wait 5 sec",
+				"type": "Wait",
+				"dependsOn": [
+					{
+						"activity": "Start Log BatchInfo",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"waitTimeInSeconds": 5
+				}
+			},
+			{
+				"name": "End Log BatchInfo -Succcess",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Populate dimensions and facts",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Logging].[UpdateBatchInfo]",
+					"storedProcedureParameters": {
+						"BatchId": {
+							"value": {
+								"value": "@variables('batchId')",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"BatchEnd": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"BatchStatus": {
+							"value": "Success",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Prep works -table structure-Initial loads parts-logging",
+				"description": "Split the extractions for tables with incremental and initial loads \nPersist table structures\nUpdate config table - extract queries, PK,...\nLogging in Loading Summary Table\n",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Set BatchId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Master - Prep works Part 1",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"batchId": {
+							"value": "@variables('batchId')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "End Log BatchInfo - Failure",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Populate dimensions and facts",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Logging].[UpdateBatchInfo]",
+					"storedProcedureParameters": {
+						"BatchId": {
+							"value": {
+								"value": "@variables('batchId')",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"BatchEnd": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"BatchStatus": {
+							"value": "Failure",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "End Log BatchInfo -Skipped",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Populate dimensions and facts",
+						"dependencyConditions": [
+							"Skipped"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Logging].[UpdateBatchInfo]",
+					"storedProcedureParameters": {
+						"BatchId": {
+							"value": {
+								"value": "@variables('batchId')",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"BatchEnd": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"BatchStatus": {
+							"value": "Skipped",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Prep works - log incremental loads",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Prep works -table structure-Initial loads parts-logging",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Prep works Part 2",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"batchId": {
+							"value": "@variables('batchId')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Raw Copy to DataLake",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Prep works - log incremental loads",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Master - DL - Raw Copy",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"batchId": {
+							"value": "@variables('batchId')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Stage Copy to DataLake",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Raw Copy to DataLake",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "DL - Stage Copy",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"batchId": {
+							"value": "@variables('batchId')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "DataLake Stage to DW",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Stage Copy to DataLake",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Master - DW - Load",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"batchId": {
+							"value": "@variables('batchId')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Populate dimensions and facts",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "DataLake Stage to DW",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[PopulateDataModel]"
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"batchId": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,24 @@
+{
+	"name": "DestinationDataset_q15",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDWDatabase",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"TableName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "int",
+			"table": {
+				"value": "@dataset().TableName",
+				"type": "Expression"
+			}
+		}
+	}
+}

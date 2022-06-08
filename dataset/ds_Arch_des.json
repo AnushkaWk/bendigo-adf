@@ -1,0 +1,22 @@
+{
+	"name": "ds_Arch_des",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LMS",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "FileServerLocation",
+				"folderPath": "Transfers/LMS/Prod/Archived"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}

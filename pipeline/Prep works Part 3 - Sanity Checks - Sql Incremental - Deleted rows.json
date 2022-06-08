@@ -1,0 +1,322 @@
+{
+	"name": "Prep works Part 3 - Sanity Checks - Sql Incremental - Deleted rows",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get List PK tables",
+				"description": "Should be changed based on Parquet Files Staging Logs",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource"
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_Dynamic_DW",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "dbo",
+							"TableName": "CreateStageIncrementalTables_PK"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Create PK stage tables",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get List PK tables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get List PK tables').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Drop and Create PK stage tables",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "sys.sp_executesql",
+								"storedProcedureParameters": {
+									"statement": {
+										"value": {
+											"value": "@item().CMD_stage",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSqlDWDatabase",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "List of Incremental loads table delete statements",
+				"description": "Should be changed based on Parquet Files Staging Logs",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Create PK stage tables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select SourceSystemName,SourceName,stage_TableName from [dbo].[IncrementalWithInitialLoadsParts]\nwhere InitialLoadCompleted=1",
+							"type": "Expression"
+						}
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_Dynamic_DW",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "dbo",
+							"TableName": "IncrementalWithInitialLoadsParts"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "loop PKs",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "List of Incremental loads table delete statements",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('List of Incremental loads table delete statements').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Truncate PK table",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 3,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "sys.sp_executesql",
+								"storedProcedureParameters": {
+									"statement": {
+										"value": {
+											"value": "@concat(' Truncate table [stg].[',\nitem().stage_TableName,\n\n'_PKs]')",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSqlDWDatabase",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "load PKs in chunk",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "CMD",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 3,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderQuery": {
+										"value": "@activity('CMD').output.firstRow.QueryExtract_PK",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00"
+								},
+								"sink": {
+									"type": "AzureSqlSink"
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "SourceDataset_SQL",
+									"type": "DatasetReference",
+									"parameters": {
+										"schemaName": "dbo",
+										"tableName": "org"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "SourceDataset_Dynamic_DW",
+									"type": "DatasetReference",
+									"parameters": {
+										"SchemaName": "stg",
+										"TableName": {
+											"value": "@concat(item().stage_TableName,'_PKs')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Delete PKs in Chunk from int tables",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "load PKs in chunk",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 3,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "sys.sp_executesql",
+								"storedProcedureParameters": {
+									"statement": {
+										"value": {
+											"value": "@activity('CMD').output.firstRow.QueryDeleteDW_PK",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSqlDWDatabase",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "CMD",
+							"description": "Should be changed based on Parquet Files Staging Logs",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Truncate PK table",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "@concat(' Select \nSourceSystemName\n,SourceName\n,stage_TableName \n,QueryExtract_PK\n,QueryDeleteDW_PK\n\nfrom [dbo].[IncrementalWithInitialLoadsParts]\nwhere InitialLoadCompleted=1',\n' and [SourceSystemName]=''' ,\nitem().SourceSystemName,\n''' and [SourceName]=''',\nitem().SourceName,\n''''\n\n)",
+										"type": "Expression"
+									}
+								},
+								"dataset": {
+									"referenceName": "SourceDataset_Dynamic_DW",
+									"type": "DatasetReference",
+									"parameters": {
+										"SchemaName": "dbo",
+										"TableName": "IncrementalWithInitialLoadsParts"
+									}
+								},
+								"firstRowOnly": true
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"batchId": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"TablesListSqlServer": {
+				"type": "Array"
+			},
+			"FileSystemList": {
+				"type": "Array"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

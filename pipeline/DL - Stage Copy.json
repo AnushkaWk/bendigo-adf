@@ -1,0 +1,216 @@
+{
+	"name": "DL - Stage Copy",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get Files List to Copy",
+				"description": "dbo.GetSourceNamesToCopy",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 5,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "Select \n[SourceName]\n,[FolderPath]\n,[YearId]\n,[MonthId]\n,[SourceSystemName]\n,[BatchID]\n\n from [dbo].[GetSourceNamesToCopy]\nwhere [BatchID]= @{pipeline().parameters.batchId} and \n[Status]='Succeeded' and  [StageCopyStatus] IS NULL",
+							"type": "Expression"
+						}
+					},
+					"dataset": {
+						"referenceName": "FilesListToCopy",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Stage Copy to Data lake",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Files List to Copy",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Files List to Copy').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 10,
+					"activities": [
+						{
+							"name": "Stage Copy",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 5,
+								"retryIntervalInSeconds": 60,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"maxConcurrentConnections": 1,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings",
+										"skipLineCount": 1
+									}
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"parallelCopies": 1,
+								"enableSkipIncompatibleRow": true,
+								"redirectIncompatibleRowSettings": {
+									"linkedServiceName": {
+										"referenceName": "ErrorOutput",
+										"type": "LinkedServiceReference"
+									},
+									"path": {
+										"value": "@concat(item().SourceSystemName,'/','erroroutput')",
+										"type": "Expression"
+									}
+								},
+								"dataIntegrationUnits": 2
+							},
+							"inputs": [
+								{
+									"referenceName": "SourceDataSet_CSV_RAW_DL",
+									"type": "DatasetReference",
+									"parameters": {
+										"sourceName": {
+											"value": "@{item().SourceName}",
+											"type": "Expression"
+										},
+										"folderPath": {
+											"value": "@{item().FolderPath}",
+											"type": "Expression"
+										},
+										"yearId": {
+											"value": "@{item().YearId}",
+											"type": "Expression"
+										},
+										"monthId": {
+											"value": "@{item().MonthId}",
+											"type": "Expression"
+										},
+										"sourceSystemName": {
+											"value": "@toLower(item().SourceSystemName)",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DestinationDataset_Parquet_Stage_DL",
+									"type": "DatasetReference",
+									"parameters": {
+										"sourceName": {
+											"value": "@{item().SourceName}",
+											"type": "Expression"
+										},
+										"folderPath": {
+											"value": "@{item().FolderPath}",
+											"type": "Expression"
+										},
+										"yearId": {
+											"value": "@{item().YearId}",
+											"type": "Expression"
+										},
+										"monthId": {
+											"value": "@{item().MonthId}",
+											"type": "Expression"
+										},
+										"sourceSystemName": {
+											"value": "@toLower(item().SourceSystemName)",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Update StageCopyStatus",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Stage Copy",
+									"dependencyConditions": [
+										"Succeeded",
+										"Failed",
+										"Skipped"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 3,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "sys.sp_executesql",
+								"storedProcedureParameters": {
+									"statement": {
+										"value": {
+											"value": "@concat(' Update [Logging].[LoadSummary]  SET [StageCopyStatus]=''',\nactivity('Stage Copy').output.executionDetails[0].status,\n''' where [BatchID]=',\npipeline().parameters.batchId,\n' and [SourceName]= ''',\nitem().SourceName,\n''''\n\n)",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSqlDWDatabase",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"batchId": {
+				"type": "string",
+				"defaultValue": "88"
+			}
+		},
+		"variables": {
+			"YearId": {
+				"type": "String"
+			},
+			"MonthId": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

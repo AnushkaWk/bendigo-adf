@@ -1,0 +1,96 @@
+{
+	"name": "pl_pbi_refresh",
+	"properties": {
+		"activities": [
+			{
+				"name": "lookup-dataset",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 4,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@concat('select *\nfrom config.powerbi_refresh\nwhere system_id = ''',pipeline().parameters.system_id, ''' and refresh_group =''', pipeline().parameters.refresh_group, ''' order by refresh_order' )\n\n",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_Dynamic_DB02",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "dummySchema",
+							"TableName": "dummyTable"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEach1",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "lookup-dataset",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('lookup-dataset').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Refresh the dataset",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_pbi_dataset_refresh",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"workspaceGuid": {
+										"value": "@item().workspace_guid",
+										"type": "Expression"
+									},
+									"datasetGuid": {
+										"value": "@item().dataset_guid",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"system_id": {
+				"type": "string",
+				"defaultValue": "trakcare"
+			},
+			"refresh_group": {
+				"type": "string",
+				"defaultValue": "clinical"
+			}
+		},
+		"annotations": []
+	}
+}

@@ -1,0 +1,220 @@
+{
+	"name": "pl_LMS-single",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy_LMS_tbl",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [
+					{
+						"name": "Source",
+						"value": "Transfers/LMS/Test/@{'bendigohealthprogramstatus_20210915.CSV'}"
+					},
+					{
+						"name": "Destination",
+						"value": "@{'lms'}/@{'lms'}/@{'bendigohealthprogramstatus_20210915.CSV'}"
+					}
+				],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "FileServerReadSettings",
+							"recursive": false,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings",
+							"skipLineCount": 0
+						}
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"tableOption": "autoCreate",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"validateDataConsistency": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Pers ID",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Pers ID",
+									"type": "Int32",
+									"physicalType": "int"
+								}
+							},
+							{
+								"source": {
+									"name": "First Name",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "First Name",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "Last Name",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Last Name",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "Module ID",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Module ID",
+									"type": "Int32",
+									"physicalType": "int"
+								}
+							},
+							{
+								"source": {
+									"name": "Module Name",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Module Name",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "Module Short Name",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Module Short Name",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "Completed Date",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Completed Date",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "Completion Status",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Completion Status",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "Position Name",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Position Name",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "Organisation Name",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Organisation Name",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "Health Service",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Health Service",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "Job Family Description",
+									"type": "String",
+									"physicalType": "String"
+								},
+								"sink": {
+									"name": "Job Family Description",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "Input_LMS",
+						"type": "DatasetReference",
+						"parameters": {
+							"Filename": "bendigohealthcertifications_20210920.CSV"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Des_ASQL",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"annotations": []
+	}
+}

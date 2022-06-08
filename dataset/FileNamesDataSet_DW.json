@@ -1,0 +1,17 @@
+{
+	"name": "FileNamesDataSet_DW",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDWDatabase",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "Logging",
+			"table": "FileNames"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

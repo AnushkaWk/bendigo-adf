@@ -1,0 +1,49 @@
+{
+	"name": "DestinationDataset_Parquet_Stage_DL",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorage",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"sourceName": {
+				"type": "string"
+			},
+			"folderPath": {
+				"type": "string"
+			},
+			"yearId": {
+				"type": "string"
+			},
+			"monthId": {
+				"type": "string"
+			},
+			"sourceSystemName": {
+				"type": "string",
+				"defaultValue": "sap"
+			}
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@replace(dataset().sourceName,'.csv','.snappy.parquet')",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@concat('stage/',dataset().folderPath,'/',dataset().yearId,'/',dataset().monthId)",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().sourceSystemName",
+					"type": "Expression"
+				}
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

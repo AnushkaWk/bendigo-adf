@@ -1,0 +1,401 @@
+{
+	"name": "Master - DL - Raw Copy",
+	"properties": {
+		"activities": [
+			{
+				"name": "Raw Copy Loop- Filesystem CSV",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Source System Lists to Copy-CSV",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Source System Lists to Copy-CSV').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 5,
+					"activities": [
+						{
+							"name": "Switch Source System",
+							"type": "Switch",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"on": {
+									"value": "@item().SourceSystemName",
+									"type": "Expression"
+								},
+								"cases": [
+									{
+										"value": "SAP",
+										"activities": [
+											{
+												"name": "Raw Copy - CSV",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "DL - Raw Copy - CSV",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"sourceSystemName": {
+															"value": "@item().SourceSystemName",
+															"type": "Expression"
+														},
+														"batchId": {
+															"value": "@pipeline().parameters.batchId",
+															"type": "Expression"
+														},
+														"SourceName": {
+															"value": "@item().SourceName",
+															"type": "Expression"
+														},
+														"FolderPath": {
+															"value": "@item().FolderPath",
+															"type": "Expression"
+														},
+														"YearId": {
+															"value": "@item().YearId",
+															"type": "Expression"
+														},
+														"MonthId": {
+															"value": "@item().MonthId",
+															"type": "Expression"
+														},
+														"containerName": {
+															"value": "@toLower(item().SourceSystemName)",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "KRONOS",
+										"activities": [
+											{
+												"name": "Raw Copy - CSV - KRONOS",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "DL - Raw Copy - CSV - KRONOS",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"sourceSystemName": {
+															"value": "@item().SourceSystemName",
+															"type": "Expression"
+														},
+														"batchId": {
+															"value": "@pipeline().parameters.batchId",
+															"type": "Expression"
+														},
+														"SourceName": {
+															"value": "@item().SourceName",
+															"type": "Expression"
+														},
+														"FolderPath": {
+															"value": "@item().FolderPath",
+															"type": "Expression"
+														},
+														"YearId": {
+															"value": "@item().YearId",
+															"type": "Expression"
+														},
+														"MonthId": {
+															"value": "@item().MonthId",
+															"type": "Expression"
+														},
+														"containerName": {
+															"value": "@toLower(item().SourceSystemName)",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Source System Lists to Copy-CSV",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "Select \nSourceSystemName,batchId,SourceName,FolderPath,YearId,MonthId,SourceSystemType ,SourceFileNameExtension\n\n from [dbo].[GetSourceNamesToCopy]\nwhere [BatchID]= @{pipeline().parameters.batchId} and \n[Status]='In Progress'\nand [SourceSystemType]='FileSystem'\nand [SourceFileNameExtension]='.csv'\n",
+							"type": "Expression"
+						},
+						"queryTimeout": "07:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_Dynamic_DW",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "dbo",
+							"TableName": "GetSourceNamesToCopy"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Raw Copy Loop- Full load Tables SqlServer",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Source System Lists to Copy-Sql-FullLoad",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Source System Lists to Copy-Sql-FullLoad').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 5,
+					"activities": [
+						{
+							"name": "Raw Copy - Sql Full",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DL - Raw Copy - SqlServer",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"schemaName": {
+										"value": "@item().schemaName",
+										"type": "Expression"
+									},
+									"tableName": {
+										"value": "@item().tableName",
+										"type": "Expression"
+									},
+									"sourceSystemName": {
+										"value": "@item().SourceSystemName",
+										"type": "Expression"
+									},
+									"batchId": {
+										"value": "@pipeline().parameters.batchId",
+										"type": "Expression"
+									},
+									"sourceName": {
+										"value": "@item().SourceName",
+										"type": "Expression"
+									},
+									"yearId": {
+										"value": "@item().YearId",
+										"type": "Expression"
+									},
+									"monthId": {
+										"value": "@item().MonthId",
+										"type": "Expression"
+									},
+									"sourceSystemType": {
+										"value": "@item().SourceSystemType",
+										"type": "Expression"
+									},
+									"loadType": {
+										"value": "@item().LoadType",
+										"type": "Expression"
+									},
+									"stageTableName": {
+										"value": "@item().Stage_TableName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Source System Lists to Copy-Sql-FullLoad",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "Select \nSourceSystemType,LoadType,schemaName,tableName,SourceSystemName,batchId,Stage_TableName,YearId,MonthId,DayId,SourceName\n from [dbo].[GetSourceNamesToCopy]\nwhere [BatchID]= @{pipeline().parameters.batchId} and \n[Status]='In Progress'\nand [SourceSystemType]='SqlServer'\nand [LoadType]='Full'",
+							"type": "Expression"
+						},
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_Dynamic_DW",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "dbo",
+							"TableName": "GetSourceNamesToCopy"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Raw Copy Loop- Incremental load Tables SqlServer",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Source System Lists to Copy-Sql-Incremental",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Source System Lists to Copy-Sql-Incremental').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 5,
+					"activities": [
+						{
+							"name": "Raw Copy - Sql Incremental",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DL - Raw Copy - SqlServer",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"schemaName": {
+										"value": "@item().schemaName",
+										"type": "Expression"
+									},
+									"tableName": {
+										"value": "@item().tableName",
+										"type": "Expression"
+									},
+									"sourceSystemName": {
+										"value": "@item().SourceSystemName",
+										"type": "Expression"
+									},
+									"batchId": {
+										"value": "@pipeline().parameters.batchId",
+										"type": "Expression"
+									},
+									"sourceName": {
+										"value": "@item().SourceName",
+										"type": "Expression"
+									},
+									"yearId": {
+										"value": "@item().YearId",
+										"type": "Expression"
+									},
+									"monthId": {
+										"value": "@item().MonthId",
+										"type": "Expression"
+									},
+									"sourceSystemType": {
+										"value": "@item().SourceSystemType",
+										"type": "Expression"
+									},
+									"loadType": {
+										"value": "@item().LoadType",
+										"type": "Expression"
+									},
+									"stageTableName": {
+										"value": "@item().Stage_TableName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Source System Lists to Copy-Sql-Incremental",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "Select \nSourceSystemType,LoadType,schemaName,tableName,SourceSystemName,batchId,Stage_TableName,YearId,MonthId,DayId,SourceName\n from [dbo].[GetSourceNamesToCopy]\nwhere [BatchID]= @{pipeline().parameters.batchId} and \n[Status]='In Progress'\nand [SourceSystemType]='SqlServer'\nand [LoadType]='Incremental'",
+							"type": "Expression"
+						},
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_Dynamic_DW",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "dbo",
+							"TableName": "GetSourceNamesToCopy"
+						}
+					},
+					"firstRowOnly": false
+				}
+			}
+		],
+		"parameters": {
+			"batchId": {
+				"type": "int",
+				"defaultValue": 88
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

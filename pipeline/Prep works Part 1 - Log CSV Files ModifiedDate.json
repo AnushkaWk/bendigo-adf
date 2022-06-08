@@ -1,0 +1,354 @@
+{
+	"name": "Prep works Part 1 - Log CSV Files ModifiedDate",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get Files to Transfer",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "TransferFolder_SAP",
+						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Filter Files Prefixes",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Get Files to Transfer",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Files to Transfer').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@startswith(item().name,pipeline().parameters.fileNamePrefix)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ForEach Log Details",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Filter Files Prefixes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter Files Prefixes').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 10,
+					"activities": [
+						{
+							"name": "Check name pattern",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Set Month",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Set Year",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Get File Info",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@and(if(greaterOrEquals(int(variables('YearId')),1970),true,false) ,if(lessOrEquals(int(variables('MonthId')),12),true,false))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Log File Info",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "Wait 2 Sec To Insert",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 3,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[Logging].[GenerateLoadSummary]",
+											"storedProcedureParameters": {
+												"batchId": {
+													"value": {
+														"value": "@pipeline().parameters.batchId",
+														"type": "Expression"
+													},
+													"type": "Int32"
+												},
+												"sourceName": {
+													"value": {
+														"value": "@concat(replace(activity('Get File Info').output.itemName,'.csv',''),pipeline().parameters.fileSystemExtension)",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"modifiedDateUTC": {
+													"value": {
+														"value": "@activity('Get File Info').output.lastModified",
+														"type": "Expression"
+													},
+													"type": "DateTime"
+												},
+												"pipelineRunID": {
+													"value": {
+														"value": "@pipeline().RunId",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"sourceSystemName": {
+													"value": {
+														"value": "@pipeline().parameters.sourceSystemName",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"sourceNamePrefix": {
+													"value": {
+														"value": "@pipeline().parameters.sourceNamePrefix",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"folderPath": {
+													"value": {
+														"value": "@pipeline().parameters.folderPath",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"sourceSystemType": {
+													"value": {
+														"value": "@pipeline().parameters.sourceSystemType",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"loadType": {
+													"value": {
+														"value": "@pipeline().parameters.loadType",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"status": {
+													"value": {
+														"value": "@pipeline().parameters.status",
+														"type": "Expression"
+													},
+													"type": "String"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "AzureSqlDWDatabase",
+											"type": "LinkedServiceReference"
+										}
+									},
+									{
+										"name": "Wait 2 Sec To Insert",
+										"type": "Wait",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"waitTimeInSeconds": 2
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Set Year",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Wait 3 Sec",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "YearId",
+								"value": {
+									"value": "@{substring(item().name,add(-8,lastindexof(item().name,'.csv')),4)}",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set Month",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Wait 3 Sec",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "MonthId",
+								"value": {
+									"value": "@{substring(item().name,add(-4,lastindexof(item().name,'.csv')),2)}",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Get File Info",
+							"type": "GetMetadata",
+							"dependsOn": [
+								{
+									"activity": "Wait 3 Sec",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 3,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "SourceDataset_SAP",
+									"type": "DatasetReference",
+									"parameters": {
+										"fileName": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								},
+								"fieldList": [
+									"lastModified",
+									"itemName"
+								],
+								"storeSettings": {
+									"type": "FileServerReadSettings",
+									"recursive": true
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							}
+						},
+						{
+							"name": "Wait 3 Sec",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 3
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"batchId": {
+				"type": "string"
+			},
+			"fileNamePrefix": {
+				"type": "string"
+			},
+			"sourceSystemName": {
+				"type": "string"
+			},
+			"sourceNamePrefix": {
+				"type": "string"
+			},
+			"folderPath": {
+				"type": "string"
+			},
+			"sourceSystemType": {
+				"type": "string"
+			},
+			"loadType": {
+				"type": "string"
+			},
+			"fileSystemExtension": {
+				"type": "string"
+			},
+			"status": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"YearId": {
+				"type": "String"
+			},
+			"MonthId": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,16 @@
+{
+	"name": "DestinationDataset_pym",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDWDatabase",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "AccrualExport",
+			"table": "File system file"
+		}
+	}
+}

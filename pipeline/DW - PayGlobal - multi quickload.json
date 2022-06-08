@@ -1,0 +1,149 @@
+{
+	"name": "DW - PayGlobal - multi quickload",
+	"properties": {
+		"activities": [
+			{
+				"name": "lookup-tables",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "select *\nfrom information_schema.tables\nwhere TABLE_TYPE = 'BASE TABLE'\n-- and TABLE_NAME like 'ACC%'\norder by table_name",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_PayGlobal",
+						"type": "DatasetReference",
+						"parameters": {
+							"schemaName": "dbo",
+							"tableName": "org"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "copy-each-table",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "lookup-tables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('lookup-tables').output.value",
+						"type": "Expression"
+					},
+					"batchCount": 8,
+					"activities": [
+						{
+							"name": "Copy data1",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"additionalColumns": [
+										{
+											"name": "ingestion_timestamp",
+											"value": {
+												"value": "@utcnow()",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "ingestion_runid",
+											"value": {
+												"value": "@pipeline().RunId",
+												"type": "Expression"
+											}
+										}
+									],
+									"sqlReaderQuery": {
+										"value": "@concat('select * from ', item().TABLE_SCHEMA, '.', item().TABLE_NAME)",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"isolationLevel": "ReadUncommitted",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "AzureSqlSink",
+									"preCopyScript": {
+										"value": "IF OBJECT_ID('@{pipeline().parameters.target_schema_name}.@{item().TABLE_NAME}') IS NOT NULL  truncate table @{pipeline().parameters.target_schema_name}.@{item().TABLE_NAME}",
+										"type": "Expression"
+									},
+									"tableOption": "autoCreate",
+									"disableMetricsCollection": false
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "SourceDataset_PayGlobal",
+									"type": "DatasetReference",
+									"parameters": {
+										"schemaName": {
+											"value": "@item().TABLE_SCHEMA",
+											"type": "Expression"
+										},
+										"tableName": {
+											"value": "@item().TABLE_NAME",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "SourceDataset_Dynamic_DB02",
+									"type": "DatasetReference",
+									"parameters": {
+										"SchemaName": {
+											"value": "@pipeline().parameters.target_schema_name",
+											"type": "Expression"
+										},
+										"TableName": {
+											"value": "@item().TABLE_NAME",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"target_schema_name": {
+				"type": "string",
+				"defaultValue": "landing_payglobal"
+			}
+		},
+		"annotations": []
+	}
+}

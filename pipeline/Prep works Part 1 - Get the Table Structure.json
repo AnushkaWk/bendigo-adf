@@ -1,0 +1,750 @@
+{
+	"name": "Prep works Part 1 - Get the Table Structure",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get Columns Definition",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Delete Existing Structure",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@concat\n(\n';with cte as \n( select      o.name table_name, c.name column_name,i.column_id,i.name,cast(i.seed_value as int) seed_value,cast(i.increment_value as int) increment_value\n from        sys.objects o \n inner join  sys.columns c on o.object_id = c.object_id \n inner join sys.identity_columns i on i.object_id=c.object_id \n where       c.is_identity = 1 \n\n)',\n\n\n\n' SELECT ',\n''' [''',\n'+ c.TABLE_SCHEMA +',\n'''].[''', \n'+ c.TABLE_NAME +',\n'''] ''',\n' as TABLE_FULLNAME, ',\n\n''' [''',\n'+ c.TABLE_SCHEMA +',\n''']''',\n' as TABLE_SCHEMA,',\n\n\n''' [''',\n'+ c.TABLE_NAME +',\n''']''',\n' as TABLE_NAME, ',\n\n\n''' [''',\n'+ c.COLUMN_NAME +',\n''']''',\n'+',\n''' [''',\n'+ c.DATA_TYPE +',\n'''] ''',\n'+',\n\n'case when c.[DATA_TYPE] in (',\n'''varchar''',\n',',\n'''nvarchar''',\n') then ',\n\n'  ISNULL(',\n'''(''',\n'+ CAST(CHARACTER_MAXIMUM_LENGTH AS VARCHAR(10)) +',\n''') ''',\n',',\n'''''',\n')',\n\n\n\n'+',\n'  ISNULL(',\n'''(''',\n'+ CAST(NUMERIC_PRECISION AS VARCHAR)',\n',',\n'''''',\n')',\n\n\n'+',\n'  ISNULL(',\n''',''',\n'+ CAST(NUMERIC_SCALE AS VARCHAR) +',\n''')''',\n',',\n'''''',\n')',\n\n\n' when c.[DATA_TYPE] =',\n'''decimal''',\n' then ',\n\n'  ISNULL(',\n'''(''',\n'+ CAST(CHARACTER_MAXIMUM_LENGTH AS VARCHAR(10)) +',\n''') ''',\n',',\n'''''',\n')',\n\n\n\n'+',\n'  ISNULL(',\n'''(''',\n'+ CAST(NUMERIC_PRECISION AS VARCHAR)',\n',',\n'''''',\n')',\n\n\n'+',\n'  ISNULL(',\n''',''',\n'+ CAST(NUMERIC_SCALE AS VARCHAR) +',\n''')''',\n',',\n'''''',\n')',\n\n\n' else ',\n'''''',\n' end ',\n\n'+ Case when cte.seed_value IS NOT NULL then ',\n'''IDENTITY(''',\n'+ Cast (cte.seed_value As varchar(10)) +',\n''',''',\n'+ Cast (cte.increment_value As varchar(10)) +',\n''') ''',\n\n' else ',\n'''''',\n' end ',\n\n'+ ( Case when c.IS_NULLABLE = ',\n'''No''', \n' then ',\n''' NOT ''',\n' else ',\n'''''' ,\n'end ) + ',\n''' NULL ''', \n\n\n'+ Coalesce(',\n''' DEFAULT ''',\n'+ c.COLUMN_DEFAULT',\n',',\n'''''',\n') ',\n\n\n'+ Case when max(c.ORDINAL_POSITION) over (partition by c.table_name)=c.ORDINAL_POSITION then ',\n '''''',\n ' else ',\n ''' , ''', \n ' end ',\n\n\n' as COLUMNS_DEFINITION,',\n' c.ORDINAL_POSITION',\n\n' FROM INFORMATION_SCHEMA.COLUMNS c ',\n' LEFT JOIN cte on c.TABLE_NAME=cte.table_name and c.COLUMN_NAME=cte.column_name ',\n\n' WHERE c.TABLE_SCHEMA= ''',\npipeline().parameters.schemaName,\n''' and c.TABLE_NAME= ''',\npipeline().parameters.tableName,\n''' ORDER BY TABLE_FULLNAME, c.ORDINAL_POSITION '\n)",
+							"type": "Expression"
+						}
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_SQL",
+						"type": "DatasetReference",
+						"parameters": {
+							"schemaName": {
+								"value": "@pipeline().parameters.schemaName",
+								"type": "Expression"
+							},
+							"tableName": {
+								"value": "@pipeline().parameters.tableName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Stage the structure",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Columns Definition",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Columns Definition').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Generate Source Table Structure",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Wait 1 sec to insert",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 3,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[cfg].[GenerateSourceTableStructure]",
+								"storedProcedureParameters": {
+									"COLUMNS_DEFINITION": {
+										"value": {
+											"value": "@item().COLUMNS_DEFINITION",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"ORDINAL_POSITION": {
+										"value": {
+											"value": "@item().ORDINAL_POSITION",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"TABLE_FULLNAME": {
+										"value": {
+											"value": "@item().TABLE_FULLNAME",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"TABLE_NAME": {
+										"value": {
+											"value": "@item().TABLE_NAME",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"TABLE_SCHEMA": {
+										"value": {
+											"value": "@item().TABLE_SCHEMA",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"sourceSystemName": {
+										"value": {
+											"value": "@pipeline().parameters.sourceSystemName",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSqlDWDatabase",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Wait 1 sec to insert",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 1
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Delete Existing Structure",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "sys.sp_executesql",
+					"storedProcedureParameters": {
+						"statement": {
+							"value": {
+								"value": "@concat ('Delete from [cfg].[SourceTableStructure] where [SourceSystemName]=''',\n\npipeline().parameters.sourceSystemName,\n\n''' and [TABLE_SCHEMA]=',\n'''[',\npipeline().parameters.schemaName,\n']''',\n\n' and [TABLE_NAME]=',\n\n'''[',\npipeline().parameters.tableName,\n']'''\n)",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Get Primary Key Columns",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Stage the structure",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@concat(' ;with cte as (select schema_name(tab.schema_id) as [schema_name], \n    pk.[name] as pk_name,\n    ic.index_column_id as column_id,\n    col.[name] as column_name, \n    tab.[name] as table_name\nfrom sys.tables tab\n    inner join sys.indexes pk\n        on tab.object_id = pk.object_id \n        and pk.is_primary_key = 1\n    inner join sys.index_columns ic\n        on ic.object_id = pk.object_id\n        and ic.index_id = pk.index_id\n    inner join sys.columns col\n        on pk.object_id = col.object_id\n        and col.column_id = ic.column_id ) ',\n\n' SELECT * FROM cte ',\n\n' WHERE [table_name]= ''',\n\npipeline().parameters.tableName,\n\n''' AND [schema_name]= ''',\n\npipeline().parameters.schemaName,\n\n'''  ORDER BY [schema_name],[pk_name],[column_id] '\n)",
+							"type": "Expression"
+						}
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_SQL",
+						"type": "DatasetReference",
+						"parameters": {
+							"schemaName": {
+								"value": "@pipeline().parameters.schemaName",
+								"type": "Expression"
+							},
+							"tableName": {
+								"value": "@pipeline().parameters.tableName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Get Indexes list",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Delete Existing Source Table Index  info",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@concat( ' select i.[name] as index_name,\n    substring(column_names, 1, len(column_names)-1) as [columns],\n    case when i.[type] = 1 then ' , \n'''Clustered index''',\n' when i.[type] = 2 then ' , \n'''Nonclustered unique index''' ,       \n' when i.[type] = 3 then ' , \n'''XML index''',\n' when i.[type] = 4 then ' , \n'''Spatial index''',\n' when i.[type] = 5 then ',\n'''Clustered columnstore index''',\n' when i.[type] = 6 then ',\n'''Nonclustered columnstore index''',\n' when i.[type] = 7 then ',\n'''Nonclustered hash index''',\n' end as index_type, ',\n' case when i.is_unique = 1 then ',\n'''Unique''',\n '    else ',\n'''Not unique''',\n' end as [unique], ',\n'  schema_name(t.schema_id) + ',\n'''.''',\n' + t.[name] as table_view, ',\n '  case when t.[type] = ',\n'''U''',\n' then ',\n'''Table''',\n' when t.[type] = ',\n'''V''',\n' then ',\n'''View''',\n'       end as [object_type] \n from sys.objects t\n    inner join sys.indexes i\n        on t.object_id = i.object_id\ncross apply (select col.[name] + ',\n''', ''' ,\n' from sys.index_columns ic\n                        inner join sys.columns col\n                            on ic.object_id = col.object_id\n                            and ic.column_id = col.column_id\n                    where ic.object_id = t.object_id\n                        and ic.index_id = i.index_id\n                            order by col.column_id\n                            for xml path (',\n'''''',\n') ) D (column_names) ',\n' where t.is_ms_shipped <> 1 ',\n' and schema_name(t.schema_id)=''' ,\npipeline().parameters.schemaName,\n''' and  t.[name]=''',\npipeline().parameters.tableName,\n''' and index_id > 0 ',\n' order by i.[name] '\n)",
+							"type": "Expression"
+						}
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_SQL",
+						"type": "DatasetReference",
+						"parameters": {
+							"schemaName": {
+								"value": "@pipeline().parameters.schemaName",
+								"type": "Expression"
+							},
+							"tableName": {
+								"value": "@pipeline().parameters.tableName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Stage Index info",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Indexes list",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Indexes list').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Wait 1 sec to insert index info",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 1
+							}
+						},
+						{
+							"name": "Persist Index Info",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Wait 1 sec to insert index info",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 3,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[cfg].[GenerateSourceTableIndexList]",
+								"storedProcedureParameters": {
+									"columns": {
+										"value": {
+											"value": "@item().columns",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"index_name": {
+										"value": {
+											"value": "@item().index_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"index_type": {
+										"value": {
+											"value": "@item().index_type",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"object_type": {
+										"value": {
+											"value": "@item().object_type",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"SourceSystemName": {
+										"value": {
+											"value": "@pipeline().parameters.sourceSystemName",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"table_view": {
+										"value": {
+											"value": "@item().table_view",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"unique": {
+										"value": {
+											"value": "@item().unique",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSqlDWDatabase",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Delete Existing Source Table Index  info",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Update - HashKey",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "sys.sp_executesql",
+					"storedProcedureParameters": {
+						"statement": {
+							"value": {
+								"value": "@concat ('Delete from [cfg].[SourceTableIndexList] where [SourceSystemName]=''',\n\npipeline().parameters.sourceSystemName,\n\n''' and [TABLE_SCHEMA]=',\n'''[',\npipeline().parameters.schemaName,\n']''',\n\n' and [TABLE_NAME]=',\n\n'''[',\npipeline().parameters.tableName,\n']'''\n)",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Update - PK columns",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Primary Key Columns",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Primary Key Columns').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Update PK - Source Table Structure",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Wait 1 sec to update",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 3,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[cfg].[UpdateTableStructure_PK]",
+								"storedProcedureParameters": {
+									"TABLE_NAME": {
+										"value": {
+											"value": "@item().table_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"TABLE_SCHEMA": {
+										"value": {
+											"value": "@item().schema_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"sourceSystemName": {
+										"value": {
+											"value": "@pipeline().parameters.sourceSystemName",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Column_NAME": {
+										"value": {
+											"value": "@item().column_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSqlDWDatabase",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Wait 1 sec to update",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 1
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Update - HashKey",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Tables List",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Tables List').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Wait 1 sec to update PK column in Config",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 1
+							}
+						},
+						{
+							"name": "Update Columns Def  in Config Table",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Wait 1 sec to update PK column in Config",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 3,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[cfg].[UpdateTableStructure]",
+								"storedProcedureParameters": {
+									"TABLE_NAME": {
+										"value": {
+											"value": "@concat(\n'[',\npipeline().parameters.tableName,\n']'\n)\n",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"TABLE_SCHEMA": {
+										"value": {
+											"value": "@concat(\n'[',\npipeline().parameters.schemaName,\n']'\n)",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"sourceSystemName": {
+										"value": {
+											"value": "@pipeline().parameters.sourceSystemName",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureSqlDWDatabase",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Wait 5 sec to update Hash Key column in Config_copy1",
+							"type": "Wait",
+							"dependsOn": [
+								{
+									"activity": "Update Columns Def  in Config Table",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 5
+							}
+						},
+						{
+							"name": "If has PK",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Wait 5 sec to update Hash Key column in Config_copy1",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(item().IsPrimaryKey,bool(1))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Update HashKey",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 3,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[cfg].[UpdateHashkeyInfo]",
+											"storedProcedureParameters": {
+												"SourceSystemName": {
+													"value": {
+														"value": "@pipeline().parameters.sourceSystemName",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"TABLE_NAME": {
+													"value": {
+														"value": "@pipeline().parameters.tableName",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"TABLE_SCHEMA": {
+													"value": {
+														"value": "@pipeline().parameters.schemaName",
+														"type": "Expression"
+													},
+													"type": "String"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "AzureSqlDWDatabase",
+											"type": "LinkedServiceReference"
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Get Tables List",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Update - PK columns",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@concat(\n';with cte as ( ',\n' SELECT distinct\n [TABLE_FULLNAME]\n ,[TABLE_SCHEMA]\n ,[TABLE_NAME]\n ,replace(replace(replace([TABLE_FULLNAME], ',\n\n'''[''',\n',',\n'''''',\n')',\n',',\n''']''',\n',' ,\n'''''',\n') ',\n',',  \n'''.''',\n ',',\n '''_''',\n')',\n\n' as TABLEFULLNAME ',\n\n',replace(replace([TABLE_NAME], ',\n\n'''[''',\n',',\n'''''',\n')',\n',',\n''']''',\n',' ,\n'''''',\n') as TABLENAME',\n\n',replace(replace([TABLE_SCHEMA], ',\n\n'''[''',\n',',\n'''''',\n')',\n',',\n''']''',\n',' ,\n'''''',\n') as TABLESCHEMA',\n' , [IsPrimaryKey] ' ,\n' FROM [cfg].[SourceTableStructure] ) select * from cte',\n\n' where TABLESCHEMA=''',\npipeline().parameters.schemaName,\n ''' and TABLENAME=''',\npipeline().parameters.tableName,\n ''' order by 1'\n  )",
+							"type": "Expression"
+						}
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_Dynamic_DW",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": {
+								"value": "@pipeline().parameters.schemaName",
+								"type": "Expression"
+							},
+							"TableName": {
+								"value": "@pipeline().parameters.tableName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			}
+		],
+		"parameters": {
+			"schemaName": {
+				"type": "string"
+			},
+			"tableName": {
+				"type": "string"
+			},
+			"loadType": {
+				"type": "string"
+			},
+			"fromDate": {
+				"type": "string"
+			},
+			"ingestionQuery": {
+				"type": "string"
+			},
+			"sourceSystemName": {
+				"type": "string"
+			},
+			"batchId": {
+				"type": "int"
+			},
+			"sourceName": {
+				"type": "string"
+			},
+			"YearId": {
+				"type": "string"
+			},
+			"MonthId": {
+				"type": "string"
+			},
+			"DayId": {
+				"type": "string"
+			},
+			"sourceNamePrefix": {
+				"type": "string"
+			},
+			"folderPath": {
+				"type": "string"
+			},
+			"sourceSystemType": {
+				"type": "string"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,111 @@
+{
+	"name": "Step 1 Create Master Key",
+	"properties": {
+		"activities": [
+			{
+				"name": "DatabaseMasterKey",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(pipeline().parameters.kvDNSName,'secrets/',pipeline().parameters.masterKeySecret,'/',pipeline().parameters.apiVersion)",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set Variable DatabaseMasterKey-Secret",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "DatabaseMasterKey",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "DatabaseMasterKey-Secret",
+					"value": {
+						"value": "@activity('DatabaseMasterKey').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "CreateMasterKey",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set Variable DatabaseMasterKey-Secret",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[PolyBase].[CreateMasterKey]",
+					"storedProcedureParameters": {
+						"masterkeySecret": {
+							"value": {
+								"value": "@variables('DatabaseMasterKey-Secret')",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"apiVersion": {
+				"type": "string",
+				"defaultValue": "?api-version=7.0"
+			},
+			"kvDNSName": {
+				"type": "string",
+				"defaultValue": "https://akv01-dev.vault.azure.net/"
+			},
+			"masterKeySecret": {
+				"type": "string",
+				"defaultValue": "dw-DatabaseMasterKey"
+			}
+		},
+		"variables": {
+			"DatabaseMasterKey-Secret": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "PolyBase"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

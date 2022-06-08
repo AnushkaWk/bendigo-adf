@@ -1,0 +1,216 @@
+{
+	"name": "Set up polybase",
+	"properties": {
+		"activities": [
+			{
+				"name": "Master Key",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Step 1 Create Master Key",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"apiVersion": "?api-version=7.0",
+						"kvDNSName": {
+							"value": "@concat('https://',\npipeline().parameters.KVName,\n'.vault.azure.net/'\n)",
+							"type": "Expression"
+						},
+						"masterKeySecret": "dw-DatabaseMasterKey"
+					}
+				}
+			},
+			{
+				"name": "Database Cred",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Master Key",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Step 2 Create DB Scoped Cred",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"apiVersion": "?api-version=7.0",
+						"kvDNSName": {
+							"value": "@concat('https://',\npipeline().parameters.KVName,\n'.vault.azure.net/'\n)",
+							"type": "Expression"
+						},
+						"databaseCredName": "DatabaseCred-Name",
+						"databaseCredIdentity": "datalakeserviceprincipal-AppId",
+						"databaseCredSecret": "datalakeserviceprincipal-Secret",
+						"TenantId": "datalakeserviceprincipal-DirectoryId"
+					}
+				}
+			},
+			{
+				"name": "Create KRONOS_EXT_DS",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Database Cred",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Step 3 Create External Data Source",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"externalDataSourceName": {
+							"value": "@Concat(toUpper(pipeline().parameters.blob_kronos),'_EXT_DS')",
+							"type": "Expression"
+						},
+						"blobContainerName": {
+							"value": "@toLower(pipeline().parameters.blob_kronos)",
+							"type": "Expression"
+						},
+						"Credential": {
+							"value": "@pipeline().parameters.Credential",
+							"type": "Expression"
+						},
+						"dataLakeStorageName": {
+							"value": "@pipeline().parameters.DLStorageName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Create SAP_EXT_DS",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Create KRONOS_EXT_DS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Step 3 Create External Data Source",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"externalDataSourceName": {
+							"value": "@Concat(toUpper(pipeline().parameters.blob_sap),'_EXT_DS')",
+							"type": "Expression"
+						},
+						"blobContainerName": {
+							"value": "@toLower(pipeline().parameters.blob_sap)",
+							"type": "Expression"
+						},
+						"Credential": {
+							"value": "@pipeline().parameters.Credential",
+							"type": "Expression"
+						},
+						"dataLakeStorageName": {
+							"value": "@pipeline().parameters.DLStorageName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Sap EFF",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Create SAP_EXT_DS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Step 4 Create External File Format",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"EFF_Name": {
+							"value": "@concat(toUpper(pipeline().parameters.blob_sap),'_EFF_Parquet')",
+							"type": "Expression"
+						},
+						"EFF_Type": "PARQUET"
+					}
+				}
+			},
+			{
+				"name": "Kronos EFF",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Sap EFF",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Step 4 Create External File Format",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"EFF_Name": {
+							"value": "@concat(toUpper(pipeline().parameters.blob_kronos),'_EFF_Parquet')",
+							"type": "Expression"
+						},
+						"EFF_Type": "PARQUET"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"KVName": {
+				"type": "string",
+				"defaultValue": "akv01-dev"
+			},
+			"DLStorageName": {
+				"type": "string",
+				"defaultValue": "adl01dev"
+			},
+			"Credential": {
+				"type": "string",
+				"defaultValue": "ADL_USER"
+			},
+			"blob_sap": {
+				"type": "string",
+				"defaultValue": "sap"
+			},
+			"blob_kronos": {
+				"type": "string",
+				"defaultValue": "kronos"
+			}
+		},
+		"folder": {
+			"name": "PolyBase"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

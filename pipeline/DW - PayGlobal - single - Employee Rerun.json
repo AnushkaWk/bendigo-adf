@@ -1,0 +1,280 @@
+{
+	"name": "DW - PayGlobal - single - Employee Rerun",
+	"properties": {
+		"activities": [
+			{
+				"name": "Set Filename",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "raw_file",
+					"value": {
+						"value": "@pipeline().parameters.raw_file",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set TableFull",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "table_full",
+					"value": {
+						"value": "@concat(pipeline().parameters.source_schema,'_',pipeline().parameters.source_table)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set RawPath",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set TableFull",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set Ingestion Year",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set Ingestion Month",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set Filename",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "raw_path",
+					"value": {
+						"value": "@concat('raw/',variables('table_full'),'/',variables('ingestion_year') , '/',variables('ingestion_month'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set Ingestion Year",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "ingestion_year",
+					"value": {
+						"value": "@pipeline().parameters.ingestion_year",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set Ingestion Month",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "ingestion_month",
+					"value": {
+						"value": "@pipeline().parameters.ingestion_month",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set Stage Path",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set RawPath",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "stage_path",
+					"value": {
+						"value": "@variables('table_full')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Copy Staging Blob to DW",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set Stage Path",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "ParquetSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						}
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"tableOption": "autoCreate",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": false,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "DestinationDataset_Parquet_Stage_DL",
+						"type": "DatasetReference",
+						"parameters": {
+							"sourceName": {
+								"value": "@variables('raw_file')",
+								"type": "Expression"
+							},
+							"folderPath": {
+								"value": "@variables('stage_path')",
+								"type": "Expression"
+							},
+							"yearId": {
+								"value": "@variables('ingestion_year')",
+								"type": "Expression"
+							},
+							"monthId": {
+								"value": "@variables('ingestion_month')",
+								"type": "Expression"
+							},
+							"sourceSystemName": {
+								"value": "@pipeline().parameters.system_name",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "SourceDataset_Dynamic_DB02",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": {
+								"value": "@pipeline().parameters.target_schema",
+								"type": "Expression"
+							},
+							"TableName": {
+								"value": "@pipeline().parameters.source_table",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			}
+		],
+		"parameters": {
+			"target_schema": {
+				"type": "string",
+				"defaultValue": "landing_payglobal"
+			},
+			"system_name": {
+				"type": "string",
+				"defaultValue": "payglobal"
+			},
+			"source_table": {
+				"type": "string",
+				"defaultValue": "Employee"
+			},
+			"source_schema": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"load_type": {
+				"type": "string",
+				"defaultValue": "H"
+			},
+			"watermark_expr_compare": {
+				"type": "string"
+			},
+			"watermark_value": {
+				"type": "string"
+			},
+			"watermark_expr_max": {
+				"type": "string"
+			},
+			"ingestion_year": {
+				"type": "string"
+			},
+			"ingestion_month": {
+				"type": "string"
+			},
+			"raw_file": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"raw_path": {
+				"type": "String"
+			},
+			"raw_file": {
+				"type": "String"
+			},
+			"table_full": {
+				"type": "String"
+			},
+			"file_timestamp": {
+				"type": "String"
+			},
+			"stage_path": {
+				"type": "String"
+			},
+			"ingestion_year": {
+				"type": "String",
+				"defaultValue": "2021"
+			},
+			"ingestion_month": {
+				"type": "String",
+				"defaultValue": "02"
+			},
+			"truncate_table": {
+				"type": "String"
+			},
+			"incremental_clause": {
+				"type": "String"
+			},
+			"ingestion_timestamp": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	}
+}

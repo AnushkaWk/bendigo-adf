@@ -1,0 +1,303 @@
+{
+	"name": "Step 2 Create DB Scoped Cred",
+	"properties": {
+		"activities": [
+			{
+				"name": "Database CredName",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(pipeline().parameters.kvDNSName,'secrets/',pipeline().parameters.databaseCredName,'/',pipeline().parameters.apiVersion)",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set Variable databaseCredName-Secret",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Database CredName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "databaseCredName-Secret",
+					"value": {
+						"value": "@activity('Database CredName').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Database CredIdentity",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(pipeline().parameters.kvDNSName,'secrets/',pipeline().parameters.databaseCredIdentity,'/',pipeline().parameters.apiVersion)",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set Variable databaseCredIdentity-Secret",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Database CredIdentity",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "databaseCredIdentity-Secret",
+					"value": {
+						"value": "@activity('Database CredIdentity').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Database CredSecret",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(pipeline().parameters.kvDNSName,'secrets/',pipeline().parameters.databaseCredSecret,'/',pipeline().parameters.apiVersion)",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set Variable databaseCred-Secret",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Database CredSecret",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "databaseCred-Secret",
+					"value": {
+						"value": "@activity('Database CredSecret').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Create DatabaseCred",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set Variable databaseCredName-Secret",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set Variable databaseCredIdentity-Secret",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set Variable databaseCred-Secret",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set Variable datalakeserviceprincipal-DirectoryId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[PolyBase].[CreateDatabaseCred]",
+					"storedProcedureParameters": {
+						"DatabaseCred": {
+							"value": {
+								"value": "@variables('databaseCredName-Secret')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Identity": {
+							"value": {
+								"value": "@variables('databaseCredIdentity-Secret')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Secret": {
+							"value": {
+								"value": "@variables('databaseCred-Secret')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"DirectoryId": {
+							"value": {
+								"value": "@variables('datalakeserviceprincipal-DirectoryId')",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Tenant ID",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(pipeline().parameters.kvDNSName,'secrets/',pipeline().parameters.TenantId,'/',pipeline().parameters.apiVersion)",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set Variable datalakeserviceprincipal-DirectoryId",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Tenant ID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "datalakeserviceprincipal-DirectoryId",
+					"value": {
+						"value": "@activity('Tenant ID').output.value",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"apiVersion": {
+				"type": "string",
+				"defaultValue": "?api-version=7.0"
+			},
+			"kvDNSName": {
+				"type": "string",
+				"defaultValue": "https://akv01-dev.vault.azure.net/"
+			},
+			"databaseCredName": {
+				"type": "string",
+				"defaultValue": "DatabaseCred-Name"
+			},
+			"databaseCredIdentity": {
+				"type": "string",
+				"defaultValue": "datalakeserviceprincipal-AppId"
+			},
+			"databaseCredSecret": {
+				"type": "string",
+				"defaultValue": "datalakeserviceprincipal-Secret"
+			},
+			"TenantId": {
+				"type": "string",
+				"defaultValue": "datalakeserviceprincipal-DirectoryId"
+			}
+		},
+		"variables": {
+			"databaseCredName-Secret": {
+				"type": "String"
+			},
+			"databaseCredIdentity-Secret": {
+				"type": "String"
+			},
+			"databaseCred-Secret": {
+				"type": "String"
+			},
+			"datalakeserviceprincipal-DirectoryId": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "PolyBase"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

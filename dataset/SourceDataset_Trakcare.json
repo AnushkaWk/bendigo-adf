@@ -1,0 +1,26 @@
+{
+	"name": "SourceDataset_Trakcare",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Trakcare_Prod",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"SchemaName": {
+				"type": "string"
+			},
+			"TableName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "OdbcTable",
+		"schema": [],
+		"typeProperties": {
+			"tableName": {
+				"value": "@concat(dataset().SchemaName,'.',dataset().TableName)",
+				"type": "Expression"
+			}
+		}
+	}
+}

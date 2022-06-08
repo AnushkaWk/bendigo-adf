@@ -1,0 +1,317 @@
+{
+	"name": "pl_trigger_devops",
+	"properties": {
+		"description": "documentation is here: https://docs.microsoft.com/en-us/rest/api/azure/devops/pipelines/runs/run%20pipeline?view=azure-devops-rest-6.0#runstate",
+		"activities": [
+			{
+				"name": "trigger-devops",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set DevOps trigger URL",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set DevOps trigger Body",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@variables('devops-url-trigger')",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json",
+						"Accept": "application/json"
+					},
+					"body": {
+						"value": "@variables('devops-body')",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "Basic",
+						"username": "AzureDevOpsPAT",
+						"password": {
+							"type": "AzureKeyVaultSecret",
+							"store": {
+								"referenceName": "AzureKeyVault",
+								"type": "LinkedServiceReference"
+							},
+							"secretName": "azure-devops-pat"
+						}
+					}
+				}
+			},
+			{
+				"name": "get status url",
+				"description": "obtain the status url from the payload. this url can be polled until the status is complete.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "trigger-devops",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "devops-url",
+					"value": {
+						"value": "@activity('trigger-devops').output.url",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "loop until status is complete",
+				"description": "this activity will sleep for a period, and then poll the status-url, and finish when complete",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "get status url",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(variables('devops-state'),'completed')",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "poll-devops",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Wait-X-minutes",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@variables('devops-url')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"Content-Type": "application/json",
+									"Accept": "application/json"
+								},
+								"body": {
+									"previewRun": false,
+									"stagesToSkip": [],
+									"resources": {
+										"repositories": {
+											"self": {
+												"refName": "refs/heads/master"
+											}
+										}
+									}
+								},
+								"authentication": {
+									"type": "Basic",
+									"username": "AzureDevOpsPAT",
+									"password": {
+										"type": "AzureKeyVaultSecret",
+										"store": {
+											"referenceName": "AzureKeyVault",
+											"type": "LinkedServiceReference"
+										},
+										"secretName": "azure-devops-pat"
+									}
+								}
+							}
+						},
+						{
+							"name": "get state of the pipeline execution",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "poll-devops",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "devops-state",
+								"value": {
+									"value": "@activity('poll-devops').output.state",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Wait-X-minutes",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": {
+									"value": "@int(pipeline().parameters.PipelineSleepSeconds)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "record result",
+							"description": "record the result if the status is 'completed'",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "get state of the pipeline execution",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(variables('devops-state'),'completed')",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "get result of the pipeline execution",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "devops-result",
+											"value": {
+												"value": "@activity('poll-devops').output.result",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						}
+					],
+					"timeout": "7.00:00:00"
+				}
+			},
+			{
+				"name": "Set DevOps trigger URL",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "devops-url-trigger",
+					"value": {
+						"value": "@replace(pipeline().globalParameters.DevOpsBuildPipelineURL,'{pipelineid}',pipeline().parameters.PipelineId)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set DevOps trigger Body",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "devops-body",
+					"value": {
+						"value": "@replace(string(pipeline().globalParameters.DevOpsBuildPipelineBody),'{branchname}',pipeline().globalParameters.DevOpsBuildBranchName)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "generate-error",
+				"description": "generate an error is the result is not = 'succeeded'",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "loop until status is complete",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@not(equals(variables('devops-result'),'succeeded'))",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "trigger-error",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "devops-error",
+								"value": {
+									"value": "@string(div(1,0))",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"PipelineId": {
+				"type": "string"
+			},
+			"PipelineSleepSeconds": {
+				"type": "string",
+				"defaultValue": "60"
+			}
+		},
+		"variables": {
+			"devops-state": {
+				"type": "String"
+			},
+			"devops-url": {
+				"type": "String"
+			},
+			"devops-url-trigger": {
+				"type": "String"
+			},
+			"devops-body": {
+				"type": "String"
+			},
+			"devops-result": {
+				"type": "String"
+			},
+			"devops-error": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	}
+}

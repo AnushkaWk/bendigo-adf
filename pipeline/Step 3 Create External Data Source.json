@@ -1,0 +1,80 @@
+{
+	"name": "Step 3 Create External Data Source",
+	"properties": {
+		"activities": [
+			{
+				"name": "Create External Data Source",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[PolyBase].[CreateExternalDataSource]",
+					"storedProcedureParameters": {
+						"blobContainerName": {
+							"value": {
+								"value": "@pipeline().parameters.blobContainerName",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Credential": {
+							"value": {
+								"value": "@pipeline().parameters.Credential",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"dataLakeStorageName": {
+							"value": {
+								"value": "@pipeline().parameters.dataLakeStorageName",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"externalDataSourceName": {
+							"value": {
+								"value": "@pipeline().parameters.externalDataSourceName",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWDatabase",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"externalDataSourceName": {
+				"type": "string",
+				"defaultValue": "KRONOS_EXT_DS"
+			},
+			"blobContainerName": {
+				"type": "string",
+				"defaultValue": "kronos"
+			},
+			"Credential": {
+				"type": "string",
+				"defaultValue": "ADL_USER"
+			},
+			"dataLakeStorageName": {
+				"type": "string",
+				"defaultValue": "adl01dev"
+			}
+		},
+		"folder": {
+			"name": "PolyBase"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

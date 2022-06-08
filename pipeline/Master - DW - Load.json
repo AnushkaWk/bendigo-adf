@@ -1,0 +1,299 @@
+{
+	"name": "Master - DW - Load",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get Source System Staged List -Full",
+				"description": "Should be changed based on Parquet Files Staging Logs",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 5,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "Select \n l.[BatchID]\n,l.[SourceSystemName]\n,l.[ID]\n,l.[Stage_SourceName]\n,l.[Stage_TableName]\n\n from [dbo].[GetSourceNamesToCopy] l\n\nwhere l.[BatchID]= @{pipeline().parameters.batchId}  \nand l.[Status]='Succeeded' and  [StageCopyStatus] ='Succeeded' \nand l.[SourceSystemType]='SqlServer'\nand l.[loadType]='Full'\nand l.[Stage_SourceName] not in (\n\nSelect [ExtractFileName] from [Logging].[IngestionSummary] \nwhere BatchId=l.BatchID\nand [SourceSystemName]=l.[SourceSystemName]\nand [ExtractFileName]=l.[Stage_SourceName]\nand [FromTo]=2\n)\norder by \n\n l.SourceSystemName\n,l.SourceSystemType\n,l.schemaName\t\n,l.tableName\n,l.SourceNamePrefix\n,l.SourceName",
+							"type": "Expression"
+						}
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_Dynamic_DW",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "dbo",
+							"TableName": "GetSourceNamesToCopy"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Full to DW",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Source System Staged List -Full",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Source System Staged List -Full').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 5,
+					"activities": [
+						{
+							"name": "Sql- Full to DW",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DW - Load Sql",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"batchId": {
+										"value": "@pipeline().parameters.batchId",
+										"type": "Expression"
+									},
+									"SourceSystemName": {
+										"value": "@item().SourceSystemName",
+										"type": "Expression"
+									},
+									"ID": {
+										"value": "@item().ID",
+										"type": "Expression"
+									},
+									"StageSourceName": {
+										"value": "@item().Stage_SourceName",
+										"type": "Expression"
+									},
+									"StageTableName": {
+										"value": "@item().Stage_TableName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Get Source System Staged List -Incremental",
+				"description": "Should be changed based on Parquet Files Staging Logs",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 5,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "Select \n l.[BatchID]\n,l.[SourceSystemName]\n,l.[ID]\n,l.[Stage_SourceName]\n,l.[Stage_TableName]\n\n from [dbo].[GetSourceNamesToCopy] l\n\nwhere l.[BatchID]= @{pipeline().parameters.batchId}  \nand l.[Status]='Succeeded' and  [StageCopyStatus] ='Succeeded' \nand l.[SourceSystemType]='SqlServer'\nand l.[loadType]='Incremental'\nand l.[Stage_SourceName] not in (\n\nSelect [ExtractFileName] from [Logging].[IngestionSummary] \nwhere BatchId=l.BatchID\nand [SourceSystemName]=l.[SourceSystemName]\nand [ExtractFileName]=l.[Stage_SourceName]\nand [FromTo]=2\n)\norder by \n\n l.SourceSystemName\n,l.SourceSystemType\n,l.schemaName\t\n,l.tableName\n,l.SourceNamePrefix\n,l.SourceName",
+							"type": "Expression"
+						}
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_Dynamic_DW",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "dbo",
+							"TableName": "GetSourceNamesToCopy"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Incremental to DW",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Source System Staged List -Incremental",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Source System Staged List -Incremental').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Sql- Incremental to DW",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DW - Load Sql",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"batchId": {
+										"value": "@pipeline().parameters.batchId",
+										"type": "Expression"
+									},
+									"SourceSystemName": {
+										"value": "@item().SourceSystemName",
+										"type": "Expression"
+									},
+									"ID": {
+										"value": "@item().ID",
+										"type": "Expression"
+									},
+									"StageSourceName": {
+										"value": "@item().Stage_SourceName",
+										"type": "Expression"
+									},
+									"StageTableName": {
+										"value": "@item().Stage_TableName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Get Source System Staged List -CSV",
+				"description": "Should be changed based on Parquet Files Staging Logs",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 5,
+					"retryIntervalInSeconds": 60,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "Select \n l.[SourceSystemName]\n,l.[FolderPath]\n,l.[StageLocation]\n,l.[SourceFileNamePrefix]\n,l.[Destination_TableName] \n--,l.[External_TableName]\n--,l.[Stage_TableName]\n,l.[Stage_SourceName]\n\n\n from [dbo].[GetSourceNamesToCopy] l\nwhere l.[BatchID]= @{pipeline().parameters.batchId} \nand l.[Status]='Succeeded' and  l.[StageCopyStatus] ='Succeeded' \nand l.[SourceSystemType]='FileSystem'\nand l.[SourceFileNameExtension]='.csv'\nand l.[Stage_SourceName] not in \n(\nSelect [ExtractFileName] from [Logging].[IngestionSummary] \nwhere BatchId=l.BatchID\nand [SourceSystemName]=l.[SourceSystemName]\nand [ExtractFileName]=l.[Stage_SourceName]\nand [FromTo]=2\n\n)\norder by \n\n l.SourceSystemName\n,l.SourceSystemType\n,l.schemaName\t\n,l.tableName\n,l.SourceNamePrefix\n,l.SourceName",
+							"type": "Expression"
+						}
+					},
+					"dataset": {
+						"referenceName": "SourceDataset_Dynamic_DW",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "dbo",
+							"TableName": "GetSourceNamesToCopy"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Load SAP to DW",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Source System Staged List -CSV",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Source System Staged List -CSV').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "DL Stage - SAP  to DW",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DW - Load SAP",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"SourceSystemName": {
+										"value": "@item().SourceSystemName",
+										"type": "Expression"
+									},
+									"FolderPath": {
+										"value": "@item().FolderPath",
+										"type": "Expression"
+									},
+									"StageLocation": {
+										"value": "@item().StageLocation",
+										"type": "Expression"
+									},
+									"SourceFileNamePrefix": {
+										"value": "@item().SourceFileNamePrefix",
+										"type": "Expression"
+									},
+									"DestinationTableName": {
+										"value": "@item().Destination_TableName",
+										"type": "Expression"
+									},
+									"SourceTableName": {
+										"value": "@item().Destination_TableName",
+										"type": "Expression"
+									},
+									"StageTableName": {
+										"value": "@item().Destination_TableName",
+										"type": "Expression"
+									},
+									"batchId": {
+										"value": "@{pipeline().parameters.batchId}",
+										"type": "Expression"
+									},
+									"ExternalTableName": {
+										"value": "@item().Destination_TableName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"batchId": {
+				"type": "string",
+				"defaultValue": "88"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

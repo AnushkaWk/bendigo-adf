@@ -1,0 +1,270 @@
+{
+	"name": "SourceDataSet_CSV_RAW_DL",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorage",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"sourceName": {
+				"type": "string",
+				"defaultValue": "ad_sap_extract-20190108.csv"
+			},
+			"folderPath": {
+				"type": "string",
+				"defaultValue": "ad_sap_extract"
+			},
+			"yearId": {
+				"type": "string",
+				"defaultValue": "2019"
+			},
+			"monthId": {
+				"type": "string",
+				"defaultValue": "01"
+			},
+			"sourceSystemName": {
+				"type": "string",
+				"defaultValue": "sap"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().sourceName",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@concat('raw/',dataset().folderPath,'/',dataset().yearId,'/',dataset().monthId)",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().sourceSystemName",
+					"type": "Expression"
+				}
+			},
+			"columnDelimiter": "^",
+			"rowDelimiter": "\r",
+			"escapeChar": "\\",
+			"firstRowAsHeader": false,
+			"quoteChar": ""
+		},
+		"schema": [
+			{
+				"name": "Employee",
+				"type": "String"
+			},
+			{
+				"name": "Last Name",
+				"type": "String"
+			},
+			{
+				"name": "First Name",
+				"type": "String"
+			},
+			{
+				"name": "Middle Name",
+				"type": "String"
+			},
+			{
+				"name": "Gender",
+				"type": "String"
+			},
+			{
+				"name": "Form of Address",
+				"type": "String"
+			},
+			{
+				"name": "Nickname",
+				"type": "String"
+			},
+			{
+				"name": "Assigned From",
+				"type": "String"
+			},
+			{
+				"name": "Assigned To",
+				"type": "String"
+			},
+			{
+				"name": "Position",
+				"type": "String"
+			},
+			{
+				"name": "Percent",
+				"type": "String"
+			},
+			{
+				"name": "Cost Centre",
+				"type": "String"
+			},
+			{
+				"name": "Position Description",
+				"type": "String"
+			},
+			{
+				"name": "Position Working Tit",
+				"type": "String"
+			},
+			{
+				"name": "Position Access Prof",
+				"type": "String"
+			},
+			{
+				"name": "Asset Number",
+				"type": "String"
+			},
+			{
+				"name": "Chief Position",
+				"type": "String"
+			},
+			{
+				"name": "Chief Position Descr",
+				"type": "String"
+			},
+			{
+				"name": "Chief Employee ID",
+				"type": "String"
+			},
+			{
+				"name": "Chief Employee Name",
+				"type": "String"
+			},
+			{
+				"name": "Chief of Chief (CoC)",
+				"type": "String"
+			},
+			{
+				"name": "CoC Position Descrip",
+				"type": "String"
+			},
+			{
+				"name": "CoC Employee ID",
+				"type": "String"
+			},
+			{
+				"name": "CoC Employee Name",
+				"type": "String"
+			},
+			{
+				"name": "Org Unit",
+				"type": "String"
+			},
+			{
+				"name": "Org Unit Description",
+				"type": "String"
+			},
+			{
+				"name": "Unit",
+				"type": "String"
+			},
+			{
+				"name": "Sub Department",
+				"type": "String"
+			},
+			{
+				"name": "Department",
+				"type": "String"
+			},
+			{
+				"name": "Director",
+				"type": "String"
+			},
+			{
+				"name": "Executive",
+				"type": "String"
+			},
+			{
+				"name": "Exec OrgUnit Name",
+				"type": "String"
+			},
+			{
+				"name": "Exec Position",
+				"type": "String"
+			},
+			{
+				"name": "Exec Employee Id",
+				"type": "String"
+			},
+			{
+				"name": "Exec EMP Name",
+				"type": "String"
+			},
+			{
+				"name": "CEO",
+				"type": "String"
+			},
+			{
+				"name": "Board",
+				"type": "String"
+			},
+			{
+				"name": "Entry Date",
+				"type": "String"
+			},
+			{
+				"name": "Employee Status",
+				"type": "String"
+			},
+			{
+				"name": "Card Template Type",
+				"type": "String"
+			},
+			{
+				"name": "Position Tier",
+				"type": "String"
+			},
+			{
+				"name": "Date of Birth",
+				"type": "String"
+			},
+			{
+				"name": "Company Id",
+				"type": "String"
+			},
+			{
+				"name": "License Plate Number",
+				"type": "String"
+			},
+			{
+				"name": "Personnel SubArea",
+				"type": "String"
+			},
+			{
+				"name": "PSA Description",
+				"type": "String"
+			},
+			{
+				"name": "Job Family",
+				"type": "String"
+			},
+			{
+				"name": "Job Family Descriptn",
+				"type": "String"
+			},
+			{
+				"name": "Performance Review",
+				"type": "String"
+			},
+			{
+				"name": "Police Check",
+				"type": "String"
+			},
+			{
+				"name": "Police Check Descrip",
+				"type": "String"
+			},
+			{
+				"name": "WWC Check",
+				"type": "String"
+			},
+			{
+				"name": "DWES Check",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

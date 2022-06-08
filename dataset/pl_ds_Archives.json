@@ -1,0 +1,22 @@
+{
+	"name": "pl_ds_Archives",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LMS",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "FileServerLocation",
+				"folderPath": "Transfers/KronosTest/Archives"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}

@@ -1,0 +1,68 @@
+{
+	"name": "Des_ASQL",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDWDatabase",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "Pers ID",
+				"type": "nvarchar"
+			},
+			{
+				"name": "First Name",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Last Name",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Module ID",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Module Name",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Module Short Name",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Completed Date",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Completion Status",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Position Name",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Organisation Name",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Health Service",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Job Family Description",
+				"type": "nvarchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "int",
+			"table": {
+				"value": "Kronos_AccrualExport",
+				"type": "Expression"
+			}
+		}
+	}
+}
